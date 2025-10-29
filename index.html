@@ -1299,8 +1299,9 @@
           this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
           
           // デバイスに応じた設定
-          this.maxEnemies = this.isMobile ? 15 : 30; // モバイルは敵の最大数を制限
+          this.maxEnemies = this.isMobile ? 10 : 30; // モバイルは敵を10体まで
           this.reducedEffects = this.isMobile; // モバイルはエフェクトを削減
+          this.collisionCheckFrame = 0; // 当たり判定を間引くためのカウンター
           this.isRunning = false;
           this.isPaused = false;
           this.isGameOver = false;
@@ -1782,7 +1783,11 @@
           this.shoot(currentTime);
           this.spawnEnemies(currentTime);
 
-          this.checkCollisions();
+          // 当たり判定（モバイルは2フレームに1回）
+          this.collisionCheckFrame++;
+          if (!this.isMobile || this.collisionCheckFrame % 2 === 0) {
+            this.checkCollisions();
+          }
         }
 
         updatePlayer(deltaTime) {
@@ -2137,10 +2142,10 @@
             velocity: { x: 0, y: 0 },
             radius: 15,
             speed: type.speed,
-            hp: type.hp,
-            maxHp: type.hp,
+            hp: this.isMobile ? type.hp * 1.2 : type.hp, // モバイルは敵のHPを20%増加
+            maxHp: this.isMobile ? type.hp * 1.2 : type.hp,
             damage: type.damage,
-            xpValue: type.xp,
+            xpValue: this.isMobile ? type.xp * 1.3 : type.xp, // モバイルはXP獲得量を30%増加
             isAlive: true,
             damageFlash: 0,
             lastShootTime: 0,
@@ -2692,8 +2697,10 @@
           this.ctx.fillStyle = gradient;
           this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+          // 背景の星（モバイルは20個、PCは50個）
+          const starCount = this.isMobile ? 20 : 50;
           this.ctx.fillStyle = '#ffffff';
-          for (let i = 0; i < 50; i++) {
+          for (let i = 0; i < starCount; i++) {
             const x = (i * 137.5) % this.canvas.width;
             const y = (i * 213.7) % this.canvas.height;
             this.ctx.fillRect(x, y, 1, 1);
