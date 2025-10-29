@@ -1788,6 +1788,9 @@
           if (!this.isMobile || this.collisionCheckFrame % 2 === 0) {
             this.checkCollisions();
           }
+          
+          // 配列のクリーンアップ（毎フレーム実行）
+          this.cleanupArrays();
         }
 
         updatePlayer(deltaTime) {
@@ -1950,6 +1953,22 @@
 
           this.enemies = this.enemies.filter(e => e.isAlive);
         }
+        
+        cleanupArrays() {
+          // 死んだ敵・弾・アイテムを即座に削除
+          this.enemies = this.enemies.filter(e => e.isAlive);
+          this.projectiles = this.projectiles.filter(p => p.isAlive);
+          this.enemyProjectiles = this.enemyProjectiles.filter(p => p.isAlive);
+          this.items = this.items.filter(i => i.isAlive);
+          
+          // 配列が大きくなりすぎないように制限
+          if (this.projectiles.length > 100) {
+            this.projectiles = this.projectiles.slice(-50); // 最新50個だけ残す
+          }
+          if (this.enemyProjectiles.length > 50) {
+            this.enemyProjectiles = this.enemyProjectiles.slice(-30);
+          }
+        }
 
         enemyShoot(enemy) {
           const dx = this.player.position.x - enemy.position.x;
@@ -2107,14 +2126,18 @@
 
         spawnEnemies(currentTime) {
           if (currentTime - this.lastEnemySpawnTime > this.enemySpawnInterval) {
-            const count = Math.min(3, 1 + Math.floor(this.gameTime / 45000));
+            // スマホは生成数を減らす
+            const baseCount = this.isMobile ? 1 : 3;
+            const count = Math.min(baseCount, 1 + Math.floor(this.gameTime / 45000));
             
             for (let i = 0; i < count; i++) {
               this.spawnEnemy();
             }
             
             this.lastEnemySpawnTime = currentTime;
-            this.enemySpawnInterval = Math.max(800, 1500 - this.gameTime / 150);
+            // スマホは生成間隔を少し長くする
+            const intervalMultiplier = this.isMobile ? 1.3 : 1.0;
+            this.enemySpawnInterval = Math.max(800, (1500 - this.gameTime / 150) * intervalMultiplier);
           }
         }
 
@@ -2261,30 +2284,36 @@
                     return;
                   }
 
-                  // スプリッターは倒すと分裂する
+                  // スプリッターは倒すと分裂する（最大数チェック付き）
                   if (enemy.type.name === 'スプリッター' && enemy.splitCount && enemy.splitCount > 0) {
-                    for (let i = 0; i < enemy.type.splitCount; i++) {
-                      const angle = (Math.PI * 2 / enemy.type.splitCount) * i;
-                      const offsetX = Math.cos(angle) * 30;
-                      const offsetY = Math.sin(angle) * 30;
-                      
-                      this.enemies.push({
-                        type: enemy.type,
-                        position: { x: enemy.position.x + offsetX, y: enemy.position.y + offsetY },
-                        velocity: { x: 0, y: 0 },
-                        radius: enemy.radius * 0.7,
-                        speed: enemy.speed * 1.2,
-                        hp: enemy.maxHp * 0.5,
-                        maxHp: enemy.maxHp * 0.5,
-                        damage: enemy.damage * 0.7,
-                        xpValue: Math.ceil(enemy.xpValue * 0.5),
-                        isAlive: true,
-                        damageFlash: 0,
-                        lastShootTime: 0,
-                        targetX: this.player.position.x,
-                        targetY: this.player.position.y,
-                        splitCount: 0, // 分裂済みはもう分裂しない
-                      });
+                    const currentEnemyCount = this.enemies.filter(e => e.isAlive).length;
+                    const canSplit = currentEnemyCount < this.maxEnemies;
+                    
+                    if (canSplit) {
+                      const splitCount = Math.min(enemy.type.splitCount, this.maxEnemies - currentEnemyCount);
+                      for (let i = 0; i < splitCount; i++) {
+                        const angle = (Math.PI * 2 / enemy.type.splitCount) * i;
+                        const offsetX = Math.cos(angle) * 30;
+                        const offsetY = Math.sin(angle) * 30;
+                        
+                        this.enemies.push({
+                          type: enemy.type,
+                          position: { x: enemy.position.x + offsetX, y: enemy.position.y + offsetY },
+                          velocity: { x: 0, y: 0 },
+                          radius: enemy.radius * 0.7,
+                          speed: enemy.speed * 1.2,
+                          hp: enemy.maxHp * 0.5,
+                          maxHp: enemy.maxHp * 0.5,
+                          damage: enemy.damage * 0.7,
+                          xpValue: Math.ceil(enemy.xpValue * 0.5),
+                          isAlive: true,
+                          damageFlash: 0,
+                          lastShootTime: 0,
+                          targetX: this.player.position.x,
+                          targetY: this.player.position.y,
+                          splitCount: 0, // 分裂済みはもう分裂しない
+                        });
+                      }
                     }
                   }
 
