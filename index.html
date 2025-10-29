@@ -616,7 +616,7 @@
             <p style="font-size: 1.3em; margin: 20px 0;">最終ボスを撃破！おめでとうございます！</p>
             <div id="clear-stats" style="margin: 20px 0; font-size: 18px; line-height: 1.8;"></div>
             <div style="margin: 30px 0;">
-              <img src="kancho.png" alt="コスモホール館長" style="max-width: 35%; height: auto; border-radius: 10px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
+              <img src="images/kancho.png" alt="コスモホール館長" style="max-width: 35%; height: auto; border-radius: 10px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
             </div>
             <button id="restart-clear-btn" class="btn btn-large" style="background: linear-gradient(135deg, #ffd700, #ffed4e); color: #000; font-weight: bold;">もう一度プレイ</button>
           </div>
@@ -1352,42 +1352,56 @@
           // BGM設定
           this.currentBGM = null;
           
-          // サウンド設定
-          this.bgmEnabled = true;
-          this.sfxEnabled = true;
+          // サウンド設定(軽量版ではデフォルトOFF)
+          this.bgmEnabled = !this.isLowSpec; // スマホ・タブレットではBGM OFF
+          this.sfxEnabled = !this.isLowSpec; // スマホ・タブレットでは効果音 OFF
 
-          // BGMの初期化
-          this.bgm = {
-            title: new Audio('audio/title_bgm.mp3'),
-            normal: new Audio('audio/normal_bgm.mp3'),
-            miniboss: new Audio('audio/miniboss_bgm.mp3'),
-            finalboss: new Audio('audio/finalboss_bgm.mp3'),
-            clear: new Audio('audio/clear_bgm.mp3'),
-            gameover: new Audio('audio/gameover_bgm.mp3'),
-            current: null
-          };
-          
-          // BGMをループ設定
-          this.bgm.title.loop = true;
-          this.bgm.normal.loop = true;
-          this.bgm.miniboss.loop = true;
-          this.bgm.finalboss.loop = true;
-          this.bgm.clear.loop = true;
-          this.bgm.gameover.loop = true;
-          
-          // BGMの音量設定
-          this.bgm.title.volume = 0.5;
-          this.bgm.normal.volume = 0.5;
-          this.bgm.miniboss.volume = 0.6;
-          this.bgm.finalboss.volume = 0.7;
-          this.bgm.clear.volume = 0.6;
-          this.bgm.gameover.volume = 0.5;
+          // BGMの初期化(軽量版ではスキップ)
+          if (!this.isLowSpec) {
+            this.bgm = {
+              title: new Audio('audio/title_bgm.mp3'),
+              normal: new Audio('audio/normal_bgm.mp3'),
+              miniboss: new Audio('audio/miniboss_bgm.mp3'),
+              finalboss: new Audio('audio/finalboss_bgm.mp3'),
+              clear: new Audio('audio/clear_bgm.mp3'),
+              gameover: new Audio('audio/gameover_bgm.mp3'),
+              current: null
+            };
+            
+            // BGMをループ設定
+            this.bgm.title.loop = true;
+            this.bgm.normal.loop = true;
+            this.bgm.miniboss.loop = true;
+            this.bgm.finalboss.loop = true;
+            this.bgm.clear.loop = true;
+            this.bgm.gameover.loop = true;
+            
+            // BGMの音量設定
+            this.bgm.title.volume = 0.5;
+            this.bgm.normal.volume = 0.5;
+            this.bgm.miniboss.volume = 0.6;
+            this.bgm.finalboss.volume = 0.7;
+            this.bgm.clear.volume = 0.6;
+            this.bgm.gameover.volume = 0.5;
+          } else {
+            // 軽量版ではダミーオブジェクト
+            this.bgm = {
+              title: null,
+              normal: null,
+              miniboss: null,
+              finalboss: null,
+              clear: null,
+              gameover: null,
+              current: null
+            };
+          }
 
-          // 効果音の初期化
-          this.sfx = {
-            playerHit: new Audio('audio/player_damage.mp3'),
-            enemyHit: new Audio('audio/enemy_hit.mp3'),
-            enemyDeath: new Audio('audio/enemy_death.mp3'),
+          // 効果音の初期化(軽量版ではスキップ)
+          if (!this.isLowSpec) {
+            this.sfx = {
+              playerHit: new Audio('audio/player_damage.mp3'),
+              enemyHit: new Audio('audio/enemy_hit.mp3'),
+              enemyDeath: new Audio('audio/enemy_death.mp3'),
             bossDeath: new Audio('audio/boss_death.mp3'),
             gemGet: new Audio('audio/gem_get.mp3'),
             itemGet: new Audio('audio/item_get.mp3')
@@ -2040,8 +2054,8 @@
         }
 
         spawnEnemies(currentTime) {
-          // 軽量版では敵の最大数を制限
-          const maxEnemies = this.isLowSpec ? 15 : 50;
+          // 軽量版では敵の最大数を制限(少し増やした)
+          const maxEnemies = this.isLowSpec ? 25 : 50;
           const activeEnemies = this.enemies.filter(e => e.isAlive).length;
           
           if (activeEnemies >= maxEnemies) {
@@ -2049,9 +2063,11 @@
           }
           
           if (currentTime - this.lastEnemySpawnTime > this.enemySpawnInterval) {
-            // 軽量版(スマホ・タブレット)では敵の数を大幅に削減
-            const baseCount = this.isLowSpec ? 1 : Math.min(3, 1 + Math.floor(this.gameTime / 45000));
-            const count = this.isLowSpec ? Math.min(2, baseCount) : baseCount;
+            // 軽量版でも敵の数を確保(レベルに応じて増加)
+            const baseCount = this.isLowSpec 
+              ? Math.min(2, 1 + Math.floor(this.gameTime / 60000)) // 1分ごとに1体増加
+              : Math.min(3, 1 + Math.floor(this.gameTime / 45000));
+            const count = baseCount;
             
             for (let i = 0; i < count; i++) {
               // 最大数チェック
@@ -2062,9 +2078,9 @@
             }
             
             this.lastEnemySpawnTime = currentTime;
-            // 軽量版では敵の出現間隔を長めに
-            const baseInterval = this.isLowSpec ? 2000 : 1500;
-            this.enemySpawnInterval = Math.max(this.isLowSpec ? 1200 : 800, baseInterval - this.gameTime / 150);
+            // 軽量版でも出現間隔を少し短く
+            const baseInterval = this.isLowSpec ? 1500 : 1500;
+            this.enemySpawnInterval = Math.max(this.isLowSpec ? 1000 : 800, baseInterval - this.gameTime / 150);
           }
         }
 
@@ -2080,16 +2096,22 @@
             case 3: x = -20; y = Math.random() * this.canvas.height; break;
           }
 
+          // 軽量版では敵を強化してバランスを取る
+          const hpMultiplier = 1.0; // HPは上げない
+          const speedMultiplier = this.isLowSpec ? 1.3 : 1.0;
+          const damageMultiplier = this.isLowSpec ? 1.3 : 1.0;
+          const xpMultiplier = this.isLowSpec ? 1.8 : 1.0; // 経験値も増やす
+
           this.enemies.push({
             type: type,
             position: { x, y },
             velocity: { x: 0, y: 0 },
             radius: 15,
-            speed: type.speed,
-            hp: type.hp,
-            maxHp: type.hp,
-            damage: type.damage,
-            xpValue: type.xp,
+            speed: type.speed * speedMultiplier,
+            hp: type.hp * hpMultiplier,
+            maxHp: type.hp * hpMultiplier,
+            damage: type.damage * damageMultiplier,
+            xpValue: Math.floor(type.xp * xpMultiplier),
             isAlive: true,
             damageFlash: 0,
             lastShootTime: 0,
@@ -2111,16 +2133,21 @@
             case 3: x = -30; y = this.canvas.height / 2; break;
           }
 
+          // 軽量版では中ボスも強化
+          const hpMultiplier = 1.0; // HPは上げない
+          const damageMultiplier = this.isLowSpec ? 1.3 : 1.0;
+          const xpMultiplier = this.isLowSpec ? 1.5 : 1.0;
+
           this.enemies.push({
             type: type,
             position: { x, y },
             velocity: { x: 0, y: 0 },
             radius: 30,
             speed: type.speed,
-            hp: type.hp,
-            maxHp: type.hp,
-            damage: type.damage,
-            xpValue: type.xp,
+            hp: type.hp * hpMultiplier,
+            maxHp: type.hp * hpMultiplier,
+            damage: type.damage * damageMultiplier,
+            xpValue: Math.floor(type.xp * xpMultiplier),
             isAlive: true,
             damageFlash: 0,
             lastShootTime: 0,
@@ -2137,16 +2164,21 @@
           const x = this.canvas.width / 2;
           const y = -50;
 
+          // 軽量版では最終ボスも強化
+          const hpMultiplier = 1.0; // HPは上げない
+          const damageMultiplier = this.isLowSpec ? 1.3 : 1.0;
+          const xpMultiplier = this.isLowSpec ? 1.5 : 1.0;
+
           this.enemies.push({
             type: type,
             position: { x, y },
             velocity: { x: 0, y: 0 },
             radius: 50,
             speed: type.speed,
-            hp: type.hp,
-            maxHp: type.hp,
-            damage: type.damage,
-            xpValue: type.xp,
+            hp: type.hp * hpMultiplier,
+            maxHp: type.hp * hpMultiplier,
+            damage: type.damage * damageMultiplier,
+            xpValue: Math.floor(type.xp * xpMultiplier),
             isAlive: true,
             damageFlash: 0,
             lastShootTime: 0,
@@ -2394,8 +2426,14 @@
             // レベルアップに必要な経験値の増加率を1.5→1.3に変更
             this.player.xpToNextLevel = Math.floor(this.player.xpToNextLevel * 1.3);
             
-            // 5の倍数のレベルで中ボス出現
-            if (this.player.level % 5 === 0 && this.player.level < 20 && this.player.level > this.lastBossLevel) {
+            // レベル10以降は中ボスの出現頻度を上げる
+            let miniBossInterval = 5; // 基本は5レベルごと
+            if (this.player.level >= 10) {
+              miniBossInterval = this.isLowSpec ? 2 : 3; // 軽量版は2レベルごと、通常版は3レベルごと
+            }
+            
+            // 中ボス出現
+            if (this.player.level % miniBossInterval === 0 && this.player.level < 20 && this.player.level > this.lastBossLevel) {
               this.spawnMiniBoss();
               this.lastBossLevel = this.player.level;
             }
