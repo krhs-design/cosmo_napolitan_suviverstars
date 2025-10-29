@@ -616,7 +616,7 @@
             <p style="font-size: 1.3em; margin: 20px 0;">最終ボスを撃破！おめでとうございます！</p>
             <div id="clear-stats" style="margin: 20px 0; font-size: 18px; line-height: 1.8;"></div>
             <div style="margin: 30px 0;">
-              <img src="images/kancho.png" alt="コスモホール館長" style="max-width: 35%; height: auto; border-radius: 10px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
+              <img src="kancho.png" alt="コスモホール館長" style="max-width: 35%; height: auto; border-radius: 10px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
             </div>
             <button id="restart-clear-btn" class="btn btn-large" style="background: linear-gradient(135deg, #ffd700, #ffed4e); color: #000; font-weight: bold;">もう一度プレイ</button>
           </div>
@@ -1327,32 +1327,29 @@
           this.bgmEnabled = true;
           this.sfxEnabled = true;
 
-          // BGMの初期化
+          // BGMのパスを保存（遅延読み込み用）
+          this.bgmSources = {
+            title: 'audio/title_bgm.mp3',
+            normal: 'audio/normal_bgm.mp3',
+            miniboss: 'audio/miniboss_bgm.mp3',
+            finalboss: 'audio/finalboss_bgm.mp3',
+            clear: 'audio/clear_bgm.mp3',
+            gameover: 'audio/gameover_bgm.mp3'
+          };
+          
+          // BGMオブジェクト（実際の読み込みは後で行う）
           this.bgm = {
-            title: new Audio('audio/title_bgm.mp3'),
-            normal: new Audio('audio/normal_bgm.mp3'),
-            miniboss: new Audio('audio/miniboss_bgm.mp3'),
-            finalboss: new Audio('audio/finalboss_bgm.mp3'),
-            clear: new Audio('audio/clear_bgm.mp3'),
-            gameover: new Audio('audio/gameover_bgm.mp3'),
+            title: null,
+            normal: null,
+            miniboss: null,
+            finalboss: null,
+            clear: null,
+            gameover: null,
             current: null
           };
           
-          // BGMをループ設定
-          this.bgm.title.loop = true;
-          this.bgm.normal.loop = true;
-          this.bgm.miniboss.loop = true;
-          this.bgm.finalboss.loop = true;
-          this.bgm.clear.loop = true;
-          this.bgm.gameover.loop = true;
-          
-          // BGMの音量設定
-          this.bgm.title.volume = 0.5;
-          this.bgm.normal.volume = 0.5;
-          this.bgm.miniboss.volume = 0.6;
-          this.bgm.finalboss.volume = 0.7;
-          this.bgm.clear.volume = 0.6;
-          this.bgm.gameover.volume = 0.5;
+          // BGMがロード済みかどうかのフラグ
+          this.bgmLoaded = {};
 
           // 効果音の初期化
           this.sfx = {
@@ -1588,6 +1585,46 @@
           this.playBGM('normal');
         }
 
+        loadBGM(type) {
+          // 既にロード済みなら何もしない
+          if (this.bgmLoaded[type]) {
+            return Promise.resolve();
+          }
+          
+          return new Promise((resolve, reject) => {
+            const audio = new Audio(this.bgmSources[type]);
+            
+            // 音量とループ設定
+            const volumeSettings = {
+              title: 0.5,
+              normal: 0.5,
+              miniboss: 0.6,
+              finalboss: 0.7,
+              clear: 0.6,
+              gameover: 0.5
+            };
+            
+            audio.volume = volumeSettings[type] || 0.5;
+            audio.loop = true;
+            
+            // ロード完了イベント
+            audio.addEventListener('canplaythrough', () => {
+              this.bgm[type] = audio;
+              this.bgmLoaded[type] = true;
+              resolve();
+            }, { once: true });
+            
+            // エラーハンドリング
+            audio.addEventListener('error', (e) => {
+              console.log(`BGM load failed (${type}):`, e);
+              reject(e);
+            });
+            
+            // ロード開始
+            audio.load();
+          });
+        }
+
         playBGM(type) {
           // サウンド設定がOFFの場合は再生しない
           if (!this.bgmEnabled) return;
@@ -1595,17 +1632,36 @@
           // 現在のタイプを保存
           this.currentBGM = type;
           
+          // 同じBGMが既に再生中なら何もしない
+          if (this.bgm.current === this.bgm[type] && this.bgm[type] && !this.bgm[type].paused) {
+            return;
+          }
+          
           // 現在のBGMを停止
-          if (this.bgm.current) {
+          if (this.bgm.current && this.bgm.current !== this.bgm[type]) {
             this.bgm.current.pause();
             this.bgm.current.currentTime = 0;
           }
           
-          // 新しいBGMを再生
-          if (this.bgm[type]) {
-            this.bgm.current = this.bgm[type];
-            this.bgm.current.play().catch(e => console.log('BGM play failed:', e));
-          }
+          // BGMをロードして再生
+          this.loadBGM(type).then(() => {
+            if (this.bgm[type] && this.currentBGM === type) {
+              this.bgm.current = this.bgm[type];
+              // ユーザー操作後なので再生できるはず
+              this.bgm.current.play().catch(e => {
+                console.log('BGM play failed:', e);
+                // モバイルで自動再生がブロックされた場合の対策
+                // 次のユーザー操作時に再試行
+                document.addEventListener('touchstart', () => {
+                  if (this.bgm.current && this.bgmEnabled) {
+                    this.bgm.current.play().catch(() => {});
+                  }
+                }, { once: true });
+              });
+            }
+          }).catch(e => {
+            console.log('BGM load and play failed:', e);
+          });
         }
 
         stopBGM() {
@@ -1636,15 +1692,15 @@
           this.pauseBtn.classList.toggle('paused');
           
           if (this.isPaused) {
-            // ポーズ時はBGMを停止
-            if (this.bgmEnabled) {
-              this.stopBGM();
+            // ポーズ時はBGMを一時停止（stopBGMは使わない）
+            if (this.bgm.current && this.bgmEnabled) {
+              this.bgm.current.pause();
             }
           } else {
             // 再開時はBGMを再生
             this.lastTime = performance.now();
-            if (this.bgmEnabled) {
-              this.playBGM(this.currentBGM || 'normal');
+            if (this.bgm.current && this.bgmEnabled) {
+              this.bgm.current.play().catch(e => console.log('BGM resume failed:', e));
             }
             this.gameLoop(this.lastTime);
           }
