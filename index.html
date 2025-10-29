@@ -4,14 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>コスモなぽりたん サバイバースターズ 🌟</title>
-  
-  <!-- Eruda デバッグツール（開発用） -->
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>
-    eruda.init();
-    console.log('🔍 Erudaデバッグモード起動！右下のボタンからコンソールを開けるよ！');
-  </script>
-  
   <style>
     * {
       margin: 0;
@@ -862,7 +854,7 @@
         ctx.restore();
       }
 
-      function drawEnemy(ctx, enemy) {
+      function drawEnemy(ctx, enemy, reducedEffects = false) {
         ctx.save();
         
         const type = enemy.type;
@@ -887,7 +879,7 @@
             break;
             
           case '速い敵':
-            // 流線型の青い形、後ろに尾
+            // 流線型の青い形、モバイルは尾を簡略化
             ctx.translate(enemy.position.x, enemy.position.y);
             const angle = Math.atan2(enemy.velocity.y, enemy.velocity.x);
             ctx.rotate(angle);
@@ -901,23 +893,27 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // 尾
-            const tailLength = enemy.radius * 1.5;
-            for (let i = 0; i < 3; i++) {
-              const alpha = 0.3 - i * 0.1;
-              ctx.strokeStyle = `rgba(52, 152, 219, ${alpha})`;
-              ctx.lineWidth = enemy.radius * 0.4 - i * 2;
-              ctx.beginPath();
-              ctx.moveTo(-enemy.radius, 0);
-              ctx.lineTo(-enemy.radius - tailLength + i * 5, 0);
-              ctx.stroke();
+            // 尾（モバイルでは簡略化）
+            if (!reducedEffects) {
+              const tailLength = enemy.radius * 1.5;
+              for (let i = 0; i < 3; i++) {
+                const alpha = 0.3 - i * 0.1;
+                ctx.strokeStyle = `rgba(52, 152, 219, ${alpha})`;
+                ctx.lineWidth = enemy.radius * 0.4 - i * 2;
+                ctx.beginPath();
+                ctx.moveTo(-enemy.radius, 0);
+                ctx.lineTo(-enemy.radius - tailLength + i * 5, 0);
+                ctx.stroke();
+              }
             }
             break;
             
           case 'タンク':
-            // 紫の六角形
+            // 紫の六角形（モバイルでは回転を簡略化）
             ctx.translate(enemy.position.x, enemy.position.y);
-            ctx.rotate(time / 2000); // ゆっくり回転
+            if (!reducedEffects) {
+              ctx.rotate(time / 2000); // PCのみゆっくり回転
+            }
             
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
@@ -934,21 +930,23 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // 装甲ライン
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.lineWidth = 2;
-            for (let i = 0; i < 6; i++) {
-              const angle = (Math.PI / 3) * i;
-              const x = Math.cos(angle) * enemy.radius * 0.5;
-              const y = Math.sin(angle) * enemy.radius * 0.5;
-              ctx.beginPath();
-              ctx.arc(x, y, 2, 0, Math.PI * 2);
-              ctx.fill();
+            // 装甲ライン（モバイルでは省略）
+            if (!reducedEffects) {
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+              ctx.lineWidth = 2;
+              for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i;
+                const x = Math.cos(angle) * enemy.radius * 0.5;
+                const y = Math.sin(angle) * enemy.radius * 0.5;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+              }
             }
             break;
             
           case 'シューター':
-            // オレンジの円+砲身+照準マーク
+            // オレンジの円+砲身
             ctx.translate(enemy.position.x, enemy.position.y);
             const shooterAngle = Math.atan2(
               enemy.targetY - enemy.position.y,
@@ -969,20 +967,22 @@
             ctx.fillStyle = type.secondaryColor;
             ctx.fillRect(0, -enemy.radius * 0.3, enemy.radius * 0.8, enemy.radius * 0.6);
             
-            // 照準マーク
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 1;
-            const crosshairSize = 5;
-            ctx.beginPath();
-            ctx.moveTo(enemy.radius * 0.8 + 5 - crosshairSize, 0);
-            ctx.lineTo(enemy.radius * 0.8 + 5 + crosshairSize, 0);
-            ctx.moveTo(enemy.radius * 0.8 + 5, -crosshairSize);
-            ctx.lineTo(enemy.radius * 0.8 + 5, crosshairSize);
-            ctx.stroke();
+            // 照準マーク（モバイルでは省略）
+            if (!reducedEffects) {
+              ctx.strokeStyle = '#ff0000';
+              ctx.lineWidth = 1;
+              const crosshairSize = 5;
+              ctx.beginPath();
+              ctx.moveTo(enemy.radius * 0.8 + 5 - crosshairSize, 0);
+              ctx.lineTo(enemy.radius * 0.8 + 5 + crosshairSize, 0);
+              ctx.moveTo(enemy.radius * 0.8 + 5, -crosshairSize);
+              ctx.lineTo(enemy.radius * 0.8 + 5, crosshairSize);
+              ctx.stroke();
+            }
             break;
             
           case 'チャージャー':
-            // 赤いトゲトゲ（突進時に白く光る）
+            // 赤いトゲトゲ（モバイルではシャドウを簡略化）
             ctx.translate(enemy.position.x, enemy.position.y);
             
             const isCharging = enemy.chargeState === 'charging';
@@ -1010,8 +1010,10 @@
             // 突進中は白く光る
             if (isCharging) {
               ctx.fillStyle = '#ffffff';
-              ctx.shadowColor = '#ffffff';
-              ctx.shadowBlur = 20;
+              if (!reducedEffects) {
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 20;
+              }
             } else {
               ctx.fillStyle = type.color;
             }
@@ -1022,12 +1024,13 @@
             break;
             
           case 'デバフ敵':
-            // 紫の円+波紋エフェクト
+            // 紫の円（モバイルでは波紋を簡略化）
             ctx.translate(enemy.position.x, enemy.position.y);
             
-            // 波紋アニメーション
+            // 波紋アニメーション（モバイルでは1つだけ）
             const rippleTime = (time / 1000) % 1;
-            for (let i = 0; i < 3; i++) {
+            const rippleCount = reducedEffects ? 1 : 3;
+            for (let i = 0; i < rippleCount; i++) {
               const rippleRadius = enemy.radius + (rippleTime + i * 0.33) * type.debuffRange;
               const rippleAlpha = Math.max(0, 0.3 - (rippleTime + i * 0.33) * 0.3);
               
@@ -1047,12 +1050,14 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // ドクロマーク風
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(-enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
-            ctx.arc(enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
-            ctx.fill();
+            // ドクロマーク風（モバイルでは省略）
+            if (!reducedEffects) {
+              ctx.fillStyle = '#ffffff';
+              ctx.beginPath();
+              ctx.arc(-enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
+              ctx.arc(enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
+              ctx.fill();
+            }
             break;
             
           case 'スプリッター':
@@ -1275,6 +1280,13 @@
         constructor(canvas) {
           this.canvas = canvas;
           this.ctx = canvas.getContext('2d');
+          
+          // モバイル判定
+          this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+          
+          // デバイスに応じた設定
+          this.maxEnemies = this.isMobile ? 15 : 30; // モバイルは敵の最大数を制限
+          this.reducedEffects = this.isMobile; // モバイルはエフェクトを削減
           this.isRunning = false;
           this.isPaused = false;
           this.isGameOver = false;
@@ -2088,6 +2100,12 @@
         }
 
         spawnEnemy() {
+          // 敵の数が最大数を超えている場合は生成しない
+          const aliveEnemies = this.enemies.filter(e => e.isAlive).length;
+          if (aliveEnemies >= this.maxEnemies) {
+            return;
+          }
+          
           const type = getRandomEnemyType(this.player.level);
           const side = Math.floor(Math.random() * 4);
           let x, y;
@@ -2758,7 +2776,7 @@
 
           this.enemies.forEach(enemy => {
             if (enemy.isAlive) {
-              drawEnemy(this.ctx, enemy);
+              drawEnemy(this.ctx, enemy, this.reducedEffects);
             }
           });
 
