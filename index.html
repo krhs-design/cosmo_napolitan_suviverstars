@@ -822,12 +822,26 @@
           ctx.imageSmoothingQuality = 'high';
           
           ctx.globalCompositeOperation = 'source-over';
+          
+          // 画像のアスペクト比を保持して描画
+          const imgAspect = img.width / img.height;
+          let drawWidth = player.radius * 2.5;
+          let drawHeight = player.radius * 2.5;
+          
+          if (imgAspect > 1) {
+            // 横長の画像
+            drawHeight = drawWidth / imgAspect;
+          } else if (imgAspect < 1) {
+            // 縦長の画像
+            drawWidth = drawHeight * imgAspect;
+          }
+          
           ctx.drawImage(
             img,
-            player.position.x - player.radius,
-            player.position.y - player.radius,
-            player.radius * 3,
-            player.radius * 3
+            player.position.x - drawWidth / 2,
+            player.position.y - drawHeight / 2,
+            drawWidth,
+            drawHeight
           );
           
           // ダメージ時の赤いオーバーレイ（無敵時以外）
