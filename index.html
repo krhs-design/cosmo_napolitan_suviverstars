@@ -1274,7 +1274,7 @@
           this.gameTime = 0;
 
           this.playerImage = new Image();
-          this.playerImage.src = 'cosmo-napolitan.png';
+          this.playerImage.src = 'images/cosmo-napolitan.png';
 
           this.player = {
             position: { x: canvas.width / 2, y: canvas.height / 2 },
@@ -1329,12 +1329,12 @@
 
           // BGMの初期化
           this.bgm = {
-            title: new Audio('title_bgm.mp3'),
-            normal: new Audio('normal_bgm.mp3'),
-            miniboss: new Audio('miniboss_bgm.mp3'),
-            finalboss: new Audio('finalboss_bgm.mp3'),
-            clear: new Audio('clear_bgm.mp3'),
-            gameover: new Audio('gameover_bgm.mp3'),
+            title: new Audio('audio/title_bgm.mp3'),
+            normal: new Audio('audio/normal_bgm.mp3'),
+            miniboss: new Audio('audio/miniboss_bgm.mp3'),
+            finalboss: new Audio('audio/finalboss_bgm.mp3'),
+            clear: new Audio('audio/clear_bgm.mp3'),
+            gameover: new Audio('audio/gameover_bgm.mp3'),
             current: null
           };
           
@@ -1356,12 +1356,12 @@
 
           // 効果音の初期化
           this.sfx = {
-            playerHit: new Audio('player_damage.mp3'),
-            enemyHit: new Audio('enemy_hit.mp3'),
-            enemyDeath: new Audio('enemy_death.mp3'),
-            bossDeath: new Audio('boss_death.mp3'),
-            gemGet: new Audio('gem_get.mp3'),
-            itemGet: new Audio('item_get.mp3')
+            playerHit: new Audio('audio/player_damage.mp3'),
+            enemyHit: new Audio('audio/enemy_hit.mp3'),
+            enemyDeath: new Audio('audio/enemy_death.mp3'),
+            bossDeath: new Audio('audio/boss_death.mp3'),
+            gemGet: new Audio('audio/gem_get.mp3'),
+            itemGet: new Audio('audio/item_get.mp3')
           };
           
           // 効果音の音量設定
