@@ -1402,18 +1402,29 @@
               playerHit: new Audio('audio/player_damage.mp3'),
               enemyHit: new Audio('audio/enemy_hit.mp3'),
               enemyDeath: new Audio('audio/enemy_death.mp3'),
-            bossDeath: new Audio('audio/boss_death.mp3'),
-            gemGet: new Audio('audio/gem_get.mp3'),
-            itemGet: new Audio('audio/item_get.mp3')
-          };
-          
-          // 効果音の音量設定
-          this.sfx.playerHit.volume = 0.6;
-          this.sfx.enemyHit.volume = 0.15;
-          this.sfx.enemyDeath.volume = 0.5;
-          this.sfx.bossDeath.volume = 0.7;
-          this.sfx.gemGet.volume = 0.5;
-          this.sfx.itemGet.volume = 0.6;
+              bossDeath: new Audio('audio/boss_death.mp3'),
+              gemGet: new Audio('audio/gem_get.mp3'),
+              itemGet: new Audio('audio/item_get.mp3')
+            };
+            
+            // 効果音の音量設定
+            this.sfx.playerHit.volume = 0.6;
+            this.sfx.enemyHit.volume = 0.15;
+            this.sfx.enemyDeath.volume = 0.5;
+            this.sfx.bossDeath.volume = 0.7;
+            this.sfx.gemGet.volume = 0.5;
+            this.sfx.itemGet.volume = 0.6;
+          } else {
+            // 軽量版ではダミーオブジェクト
+            this.sfx = {
+              playerHit: null,
+              enemyHit: null,
+              enemyDeath: null,
+              bossDeath: null,
+              gemGet: null,
+              itemGet: null
+            };
+          }
 
           this.activeEffects = {
             speedBoost: 0,
@@ -1635,6 +1646,9 @@
           // サウンド設定がOFFの場合は再生しない
           if (!this.bgmEnabled) return;
           
+          // 軽量版の場合はBGMオブジェクトがないので何もしない
+          if (this.isLowSpec) return;
+          
           // 現在のタイプを保存
           this.currentBGM = type;
           
@@ -1652,6 +1666,9 @@
         }
 
         stopBGM() {
+          // 軽量版の場合は何もしない
+          if (this.isLowSpec) return;
+          
           if (this.bgm.current) {
             this.bgm.current.pause();
             this.bgm.current.currentTime = 0;
@@ -1662,6 +1679,9 @@
         playSFX(type) {
           // 効果音設定がOFFの場合は再生しない
           if (!this.sfxEnabled) return;
+          
+          // 軽量版の場合は効果音オブジェクトがないので何もしない
+          if (this.isLowSpec) return;
           
           if (this.sfx[type]) {
             // 音声を複製して再生（同時再生を可能に）
