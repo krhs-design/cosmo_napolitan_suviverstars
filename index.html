@@ -1595,13 +1595,8 @@
           // 現在のタイプを保存
           this.currentBGM = type;
           
-          // 同じBGMが既に再生中なら何もしない
-          if (this.bgm.current === this.bgm[type] && !this.bgm.current.paused) {
-            return;
-          }
-          
           // 現在のBGMを停止
-          if (this.bgm.current && this.bgm.current !== this.bgm[type]) {
+          if (this.bgm.current) {
             this.bgm.current.pause();
             this.bgm.current.currentTime = 0;
           }
@@ -1609,12 +1604,7 @@
           // 新しいBGMを再生
           if (this.bgm[type]) {
             this.bgm.current = this.bgm[type];
-            // 少し遅延させてから再生
-            setTimeout(() => {
-              if (this.bgm.current === this.bgm[type]) {
-                this.bgm.current.play().catch(e => console.log('BGM play failed:', e));
-              }
-            }, 100);
+            this.bgm.current.play().catch(e => console.log('BGM play failed:', e));
           }
         }
 
@@ -1646,15 +1636,15 @@
           this.pauseBtn.classList.toggle('paused');
           
           if (this.isPaused) {
-            // ポーズ時はBGMを一時停止（stopBGMは使わない）
-            if (this.bgm.current && this.bgmEnabled) {
-              this.bgm.current.pause();
+            // ポーズ時はBGMを停止
+            if (this.bgmEnabled) {
+              this.stopBGM();
             }
           } else {
             // 再開時はBGMを再生
             this.lastTime = performance.now();
-            if (this.bgm.current && this.bgmEnabled) {
-              this.bgm.current.play().catch(e => console.log('BGM resume failed:', e));
+            if (this.bgmEnabled) {
+              this.playBGM(this.currentBGM || 'normal');
             }
             this.gameLoop(this.lastTime);
           }
