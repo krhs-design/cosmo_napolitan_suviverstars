@@ -749,7 +749,7 @@
         }
       };
 
-      function drawPlayer(ctx, player, img, time) {
+      function drawPlayer(ctx, player, img, time, isLowSpec = false) {
         ctx.save();
         
         // 無敵時のエフェクト
@@ -759,35 +759,45 @@
           // 虹色のオーラ
           const hue = (time / 10) % 360;
           ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
-          ctx.shadowBlur = 30;
+          ctx.shadowBlur = isLowSpec ? 15 : 30;
           
-          // 回転する虹色の輪
-          const rotationSpeed = time / 500;
-          for (let i = 0; i < 3; i++) {
-            const angle = rotationSpeed + (i * Math.PI * 2 / 3);
-            const radius = player.radius + 15 + Math.sin(time / 200 + i) * 5;
-            
-            ctx.strokeStyle = `hsl(${(hue + i * 120) % 360}, 100%, 60%)`;
+          if (isLowSpec) {
+            // 軽量版: シンプルな虹色の輪1つ
+            const radius = player.radius + 15;
+            ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
             ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.arc(player.position.x, player.position.y, radius, angle, angle + Math.PI);
+            ctx.arc(player.position.x, player.position.y, radius, 0, Math.PI * 2);
             ctx.stroke();
-          }
-          
-          // キラキラ星
-          for (let i = 0; i < 6; i++) {
-            const starAngle = rotationSpeed * 2 + (i * Math.PI / 3);
-            const starDist = player.radius + 20;
-            const starX = player.position.x + Math.cos(starAngle) * starDist;
-            const starY = player.position.y + Math.sin(starAngle) * starDist;
-            const starHue = (hue + i * 60) % 360;
+          } else {
+            // 通常版: 回転する虹色の輪
+            const rotationSpeed = time / 500;
+            for (let i = 0; i < 3; i++) {
+              const angle = rotationSpeed + (i * Math.PI * 2 / 3);
+              const radius = player.radius + 15 + Math.sin(time / 200 + i) * 5;
+              
+              ctx.strokeStyle = `hsl(${(hue + i * 120) % 360}, 100%, 60%)`;
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.arc(player.position.x, player.position.y, radius, angle, angle + Math.PI);
+              ctx.stroke();
+            }
             
-            ctx.fillStyle = `hsl(${starHue}, 100%, 80%)`;
-            ctx.shadowColor = `hsl(${starHue}, 100%, 70%)`;
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-            ctx.arc(starX, starY, 3, 0, Math.PI * 2);
-            ctx.fill();
+            // キラキラ星
+            for (let i = 0; i < 6; i++) {
+              const starAngle = rotationSpeed * 2 + (i * Math.PI / 3);
+              const starDist = player.radius + 20;
+              const starX = player.position.x + Math.cos(starAngle) * starDist;
+              const starY = player.position.y + Math.sin(starAngle) * starDist;
+              const starHue = (hue + i * 60) % 360;
+              
+              ctx.fillStyle = `hsl(${starHue}, 100%, 80%)`;
+              ctx.shadowColor = `hsl(${starHue}, 100%, 70%)`;
+              ctx.shadowBlur = 10;
+              ctx.beginPath();
+              ctx.arc(starX, starY, 3, 0, Math.PI * 2);
+              ctx.fill();
+            }
           }
         }
         
@@ -823,15 +833,15 @@
           
           ctx.globalCompositeOperation = 'source-over';
           
-          // 画像のアスペクト比を保持して描画
+          // 画像のアスペクト比を保持
           const imgAspect = img.width / img.height;
-          let drawWidth = player.radius * 2.5;
-          let drawHeight = player.radius * 2.5;
+          let drawWidth = player.radius * 2;
+          let drawHeight = player.radius * 2;
           
           if (imgAspect > 1) {
             // 横長の画像
             drawHeight = drawWidth / imgAspect;
-          } else if (imgAspect < 1) {
+          } else {
             // 縦長の画像
             drawWidth = drawHeight * imgAspect;
           }
@@ -868,7 +878,7 @@
         ctx.restore();
       }
 
-      function drawEnemy(ctx, enemy, reducedEffects = false) {
+      function drawEnemy(ctx, enemy) {
         ctx.save();
         
         const type = enemy.type;
@@ -893,7 +903,7 @@
             break;
             
           case '速い敵':
-            // 流線型の青い形、モバイルは尾を簡略化
+            // 流線型の青い形、後ろに尾
             ctx.translate(enemy.position.x, enemy.position.y);
             const angle = Math.atan2(enemy.velocity.y, enemy.velocity.x);
             ctx.rotate(angle);
@@ -907,27 +917,23 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // 尾（モバイルでは簡略化）
-            if (!reducedEffects) {
-              const tailLength = enemy.radius * 1.5;
-              for (let i = 0; i < 3; i++) {
-                const alpha = 0.3 - i * 0.1;
-                ctx.strokeStyle = `rgba(52, 152, 219, ${alpha})`;
-                ctx.lineWidth = enemy.radius * 0.4 - i * 2;
-                ctx.beginPath();
-                ctx.moveTo(-enemy.radius, 0);
-                ctx.lineTo(-enemy.radius - tailLength + i * 5, 0);
-                ctx.stroke();
-              }
+            // 尾
+            const tailLength = enemy.radius * 1.5;
+            for (let i = 0; i < 3; i++) {
+              const alpha = 0.3 - i * 0.1;
+              ctx.strokeStyle = `rgba(52, 152, 219, ${alpha})`;
+              ctx.lineWidth = enemy.radius * 0.4 - i * 2;
+              ctx.beginPath();
+              ctx.moveTo(-enemy.radius, 0);
+              ctx.lineTo(-enemy.radius - tailLength + i * 5, 0);
+              ctx.stroke();
             }
             break;
             
           case 'タンク':
-            // 紫の六角形（モバイルでは回転を簡略化）
+            // 紫の六角形
             ctx.translate(enemy.position.x, enemy.position.y);
-            if (!reducedEffects) {
-              ctx.rotate(time / 2000); // PCのみゆっくり回転
-            }
+            ctx.rotate(time / 2000); // ゆっくり回転
             
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
@@ -944,23 +950,21 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // 装甲ライン（モバイルでは省略）
-            if (!reducedEffects) {
-              ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-              ctx.lineWidth = 2;
-              for (let i = 0; i < 6; i++) {
-                const angle = (Math.PI / 3) * i;
-                const x = Math.cos(angle) * enemy.radius * 0.5;
-                const y = Math.sin(angle) * enemy.radius * 0.5;
-                ctx.beginPath();
-                ctx.arc(x, y, 2, 0, Math.PI * 2);
-                ctx.fill();
-              }
+            // 装甲ライン
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 6; i++) {
+              const angle = (Math.PI / 3) * i;
+              const x = Math.cos(angle) * enemy.radius * 0.5;
+              const y = Math.sin(angle) * enemy.radius * 0.5;
+              ctx.beginPath();
+              ctx.arc(x, y, 2, 0, Math.PI * 2);
+              ctx.fill();
             }
             break;
             
           case 'シューター':
-            // オレンジの円+砲身
+            // オレンジの円+砲身+照準マーク
             ctx.translate(enemy.position.x, enemy.position.y);
             const shooterAngle = Math.atan2(
               enemy.targetY - enemy.position.y,
@@ -981,22 +985,20 @@
             ctx.fillStyle = type.secondaryColor;
             ctx.fillRect(0, -enemy.radius * 0.3, enemy.radius * 0.8, enemy.radius * 0.6);
             
-            // 照準マーク（モバイルでは省略）
-            if (!reducedEffects) {
-              ctx.strokeStyle = '#ff0000';
-              ctx.lineWidth = 1;
-              const crosshairSize = 5;
-              ctx.beginPath();
-              ctx.moveTo(enemy.radius * 0.8 + 5 - crosshairSize, 0);
-              ctx.lineTo(enemy.radius * 0.8 + 5 + crosshairSize, 0);
-              ctx.moveTo(enemy.radius * 0.8 + 5, -crosshairSize);
-              ctx.lineTo(enemy.radius * 0.8 + 5, crosshairSize);
-              ctx.stroke();
-            }
+            // 照準マーク
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 1;
+            const crosshairSize = 5;
+            ctx.beginPath();
+            ctx.moveTo(enemy.radius * 0.8 + 5 - crosshairSize, 0);
+            ctx.lineTo(enemy.radius * 0.8 + 5 + crosshairSize, 0);
+            ctx.moveTo(enemy.radius * 0.8 + 5, -crosshairSize);
+            ctx.lineTo(enemy.radius * 0.8 + 5, crosshairSize);
+            ctx.stroke();
             break;
             
           case 'チャージャー':
-            // 赤いトゲトゲ（モバイルではシャドウを簡略化）
+            // 赤いトゲトゲ（突進時に白く光る）
             ctx.translate(enemy.position.x, enemy.position.y);
             
             const isCharging = enemy.chargeState === 'charging';
@@ -1024,10 +1026,8 @@
             // 突進中は白く光る
             if (isCharging) {
               ctx.fillStyle = '#ffffff';
-              if (!reducedEffects) {
-                ctx.shadowColor = '#ffffff';
-                ctx.shadowBlur = 20;
-              }
+              ctx.shadowColor = '#ffffff';
+              ctx.shadowBlur = 20;
             } else {
               ctx.fillStyle = type.color;
             }
@@ -1038,13 +1038,12 @@
             break;
             
           case 'デバフ敵':
-            // 紫の円（モバイルでは波紋を簡略化）
+            // 紫の円+波紋エフェクト
             ctx.translate(enemy.position.x, enemy.position.y);
             
-            // 波紋アニメーション（モバイルでは1つだけ）
+            // 波紋アニメーション
             const rippleTime = (time / 1000) % 1;
-            const rippleCount = reducedEffects ? 1 : 3;
-            for (let i = 0; i < rippleCount; i++) {
+            for (let i = 0; i < 3; i++) {
               const rippleRadius = enemy.radius + (rippleTime + i * 0.33) * type.debuffRange;
               const rippleAlpha = Math.max(0, 0.3 - (rippleTime + i * 0.33) * 0.3);
               
@@ -1064,14 +1063,12 @@
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // ドクロマーク風（モバイルでは省略）
-            if (!reducedEffects) {
-              ctx.fillStyle = '#ffffff';
-              ctx.beginPath();
-              ctx.arc(-enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
-              ctx.arc(enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
-              ctx.fill();
-            }
+            // ドクロマーク風
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
+            ctx.arc(enemy.radius * 0.3, -enemy.radius * 0.2, enemy.radius * 0.2, 0, Math.PI * 2);
+            ctx.fill();
             break;
             
           case 'スプリッター':
@@ -1268,15 +1265,10 @@
       }
 
       // プレイヤーのレベルに応じて出現可能な敵タイプを選択（重み付き）
-      function getRandomEnemyType(playerLevel, isMobile = false) {
-        let availableTypes = Object.values(ENEMY_TYPES).filter(t => 
+      function getRandomEnemyType(playerLevel) {
+        const availableTypes = Object.values(ENEMY_TYPES).filter(t => 
           t.spawnWeight > 0 && t.minLevel <= playerLevel
         );
-        
-        // スマホではスプリッター（分裂敵）を除外
-        if (isMobile) {
-          availableTypes = availableTypes.filter(t => t.name !== 'スプリッター');
-        }
         
         if (availableTypes.length === 0) {
           return ENEMY_TYPES.BASIC;
@@ -1299,21 +1291,16 @@
         constructor(canvas) {
           this.canvas = canvas;
           this.ctx = canvas.getContext('2d');
-          
-          // モバイル判定
-          this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
-          
-          // デバイスに応じた設定（スマホは超軽量モード）
-          this.maxEnemies = this.isMobile ? 5 : 30; // スマホは敵を5体まで
-          this.maxProjectiles = this.isMobile ? 20 : 200; // スマホは弾を20個まで
-          this.reducedEffects = this.isMobile; // モバイルはエフェクトを削減
-          this.disableSplitter = this.isMobile; // スマホではスプリッターを無効化
-          this.collisionCheckFrame = 0; // 当たり判定を間引くためのカウンター
           this.isRunning = false;
           this.isPaused = false;
           this.isGameOver = false;
           this.lastTime = 0;
           this.gameTime = 0;
+          
+          // デバイス判定(スマホとタブレットを軽量版にする)
+          this.isMobile = window.innerWidth <= 600;
+          this.isTablet = window.innerWidth > 600 && window.innerWidth <= 820;
+          this.isLowSpec = this.isMobile || this.isTablet;
 
           this.playerImage = new Image();
           this.playerImage.src = 'images/cosmo-napolitan.png';
@@ -1369,29 +1356,32 @@
           this.bgmEnabled = true;
           this.sfxEnabled = true;
 
-          // BGMのパスを保存（遅延読み込み用）
-          this.bgmSources = {
-            title: 'audio/title_bgm.mp3',
-            normal: 'audio/normal_bgm.mp3',
-            miniboss: 'audio/miniboss_bgm.mp3',
-            finalboss: 'audio/finalboss_bgm.mp3',
-            clear: 'audio/clear_bgm.mp3',
-            gameover: 'audio/gameover_bgm.mp3'
-          };
-          
-          // BGMオブジェクト（実際の読み込みは後で行う）
+          // BGMの初期化
           this.bgm = {
-            title: null,
-            normal: null,
-            miniboss: null,
-            finalboss: null,
-            clear: null,
-            gameover: null,
+            title: new Audio('audio/title_bgm.mp3'),
+            normal: new Audio('audio/normal_bgm.mp3'),
+            miniboss: new Audio('audio/miniboss_bgm.mp3'),
+            finalboss: new Audio('audio/finalboss_bgm.mp3'),
+            clear: new Audio('audio/clear_bgm.mp3'),
+            gameover: new Audio('audio/gameover_bgm.mp3'),
             current: null
           };
           
-          // BGMがロード済みかどうかのフラグ
-          this.bgmLoaded = {};
+          // BGMをループ設定
+          this.bgm.title.loop = true;
+          this.bgm.normal.loop = true;
+          this.bgm.miniboss.loop = true;
+          this.bgm.finalboss.loop = true;
+          this.bgm.clear.loop = true;
+          this.bgm.gameover.loop = true;
+          
+          // BGMの音量設定
+          this.bgm.title.volume = 0.5;
+          this.bgm.normal.volume = 0.5;
+          this.bgm.miniboss.volume = 0.6;
+          this.bgm.finalboss.volume = 0.7;
+          this.bgm.clear.volume = 0.6;
+          this.bgm.gameover.volume = 0.5;
 
           // 効果音の初期化
           this.sfx = {
@@ -1627,46 +1617,6 @@
           this.playBGM('normal');
         }
 
-        loadBGM(type) {
-          // 既にロード済みなら何もしない
-          if (this.bgmLoaded[type]) {
-            return Promise.resolve();
-          }
-          
-          return new Promise((resolve, reject) => {
-            const audio = new Audio(this.bgmSources[type]);
-            
-            // 音量とループ設定
-            const volumeSettings = {
-              title: 0.5,
-              normal: 0.5,
-              miniboss: 0.6,
-              finalboss: 0.7,
-              clear: 0.6,
-              gameover: 0.5
-            };
-            
-            audio.volume = volumeSettings[type] || 0.5;
-            audio.loop = true;
-            
-            // ロード完了イベント
-            audio.addEventListener('canplaythrough', () => {
-              this.bgm[type] = audio;
-              this.bgmLoaded[type] = true;
-              resolve();
-            }, { once: true });
-            
-            // エラーハンドリング
-            audio.addEventListener('error', (e) => {
-              console.log(`BGM load failed (${type}):`, e);
-              reject(e);
-            });
-            
-            // ロード開始
-            audio.load();
-          });
-        }
-
         playBGM(type) {
           // サウンド設定がOFFの場合は再生しない
           if (!this.bgmEnabled) return;
@@ -1674,36 +1624,17 @@
           // 現在のタイプを保存
           this.currentBGM = type;
           
-          // 同じBGMが既に再生中なら何もしない
-          if (this.bgm.current === this.bgm[type] && this.bgm[type] && !this.bgm[type].paused) {
-            return;
-          }
-          
           // 現在のBGMを停止
-          if (this.bgm.current && this.bgm.current !== this.bgm[type]) {
+          if (this.bgm.current) {
             this.bgm.current.pause();
             this.bgm.current.currentTime = 0;
           }
           
-          // BGMをロードして再生
-          this.loadBGM(type).then(() => {
-            if (this.bgm[type] && this.currentBGM === type) {
-              this.bgm.current = this.bgm[type];
-              // ユーザー操作後なので再生できるはず
-              this.bgm.current.play().catch(e => {
-                console.log('BGM play failed:', e);
-                // モバイルで自動再生がブロックされた場合の対策
-                // 次のユーザー操作時に再試行
-                document.addEventListener('touchstart', () => {
-                  if (this.bgm.current && this.bgmEnabled) {
-                    this.bgm.current.play().catch(() => {});
-                  }
-                }, { once: true });
-              });
-            }
-          }).catch(e => {
-            console.log('BGM load and play failed:', e);
-          });
+          // 新しいBGMを再生
+          if (this.bgm[type]) {
+            this.bgm.current = this.bgm[type];
+            this.bgm.current.play().catch(e => console.log('BGM play failed:', e));
+          }
         }
 
         stopBGM() {
@@ -1734,15 +1665,15 @@
           this.pauseBtn.classList.toggle('paused');
           
           if (this.isPaused) {
-            // ポーズ時はBGMを一時停止（stopBGMは使わない）
-            if (this.bgm.current && this.bgmEnabled) {
-              this.bgm.current.pause();
+            // ポーズ時はBGMを停止
+            if (this.bgmEnabled) {
+              this.stopBGM();
             }
           } else {
             // 再開時はBGMを再生
             this.lastTime = performance.now();
-            if (this.bgm.current && this.bgmEnabled) {
-              this.bgm.current.play().catch(e => console.log('BGM resume failed:', e));
+            if (this.bgmEnabled) {
+              this.playBGM(this.currentBGM || 'normal');
             }
             this.gameLoop(this.lastTime);
           }
@@ -1790,14 +1721,7 @@
           this.shoot(currentTime);
           this.spawnEnemies(currentTime);
 
-          // 当たり判定（モバイルは2フレームに1回）
-          this.collisionCheckFrame++;
-          if (!this.isMobile || this.collisionCheckFrame % 2 === 0) {
-            this.checkCollisions();
-          }
-          
-          // 配列のクリーンアップ（毎フレーム実行）
-          this.cleanupArrays();
+          this.checkCollisions();
         }
 
         updatePlayer(deltaTime) {
@@ -1960,22 +1884,6 @@
 
           this.enemies = this.enemies.filter(e => e.isAlive);
         }
-        
-        cleanupArrays() {
-          // 死んだ敵・弾・アイテムを即座に削除
-          this.enemies = this.enemies.filter(e => e.isAlive);
-          this.projectiles = this.projectiles.filter(p => p.isAlive);
-          this.enemyProjectiles = this.enemyProjectiles.filter(p => p.isAlive);
-          this.items = this.items.filter(i => i.isAlive);
-          
-          // 配列が大きくなりすぎないように制限
-          if (this.projectiles.length > 100) {
-            this.projectiles = this.projectiles.slice(-50); // 最新50個だけ残す
-          }
-          if (this.enemyProjectiles.length > 50) {
-            this.enemyProjectiles = this.enemyProjectiles.slice(-30);
-          }
-        }
 
         enemyShoot(enemy) {
           const dx = this.player.position.x - enemy.position.x;
@@ -2078,11 +1986,6 @@
 
           if (distance > this.player.range) return;
 
-          // スマホでは弾の最大数をチェック
-          if (this.isMobile && this.projectiles.length >= this.maxProjectiles) {
-            return; // 弾が多すぎる場合は発射しない
-          }
-
           const powerUpActive = this.activeEffects.powerUp > currentTime;
           const damageMultiplier = powerUpActive ? 2.0 : 1.0;
 
@@ -2137,30 +2040,36 @@
         }
 
         spawnEnemies(currentTime) {
+          // 軽量版では敵の最大数を制限
+          const maxEnemies = this.isLowSpec ? 15 : 50;
+          const activeEnemies = this.enemies.filter(e => e.isAlive).length;
+          
+          if (activeEnemies >= maxEnemies) {
+            return; // 敵が多すぎる場合はスポーンしない
+          }
+          
           if (currentTime - this.lastEnemySpawnTime > this.enemySpawnInterval) {
-            // スマホは生成数を減らす
-            const baseCount = this.isMobile ? 1 : 3;
-            const count = Math.min(baseCount, 1 + Math.floor(this.gameTime / 45000));
+            // 軽量版(スマホ・タブレット)では敵の数を大幅に削減
+            const baseCount = this.isLowSpec ? 1 : Math.min(3, 1 + Math.floor(this.gameTime / 45000));
+            const count = this.isLowSpec ? Math.min(2, baseCount) : baseCount;
             
             for (let i = 0; i < count; i++) {
+              // 最大数チェック
+              if (this.enemies.filter(e => e.isAlive).length >= maxEnemies) {
+                break;
+              }
               this.spawnEnemy();
             }
             
             this.lastEnemySpawnTime = currentTime;
-            // スマホは生成間隔を少し長くする
-            const intervalMultiplier = this.isMobile ? 1.3 : 1.0;
-            this.enemySpawnInterval = Math.max(800, (1500 - this.gameTime / 150) * intervalMultiplier);
+            // 軽量版では敵の出現間隔を長めに
+            const baseInterval = this.isLowSpec ? 2000 : 1500;
+            this.enemySpawnInterval = Math.max(this.isLowSpec ? 1200 : 800, baseInterval - this.gameTime / 150);
           }
         }
 
         spawnEnemy() {
-          // 敵の数が最大数を超えている場合は生成しない
-          const aliveEnemies = this.enemies.filter(e => e.isAlive).length;
-          if (aliveEnemies >= this.maxEnemies) {
-            return;
-          }
-          
-          const type = getRandomEnemyType(this.player.level, this.isMobile);
+          const type = getRandomEnemyType(this.player.level);
           const side = Math.floor(Math.random() * 4);
           let x, y;
 
@@ -2177,10 +2086,10 @@
             velocity: { x: 0, y: 0 },
             radius: 15,
             speed: type.speed,
-            hp: this.isMobile ? type.hp * 1.5 : type.hp, // モバイルは敵のHPを50%増加
-            maxHp: this.isMobile ? type.hp * 1.5 : type.hp,
+            hp: type.hp,
+            maxHp: type.hp,
             damage: type.damage,
-            xpValue: this.isMobile ? type.xp * 1.8 : type.xp, // モバイルはXP獲得量を80%増加
+            xpValue: type.xp,
             isAlive: true,
             damageFlash: 0,
             lastShootTime: 0,
@@ -2296,36 +2205,30 @@
                     return;
                   }
 
-                  // スプリッターは倒すと分裂する（最大数チェック付き）
+                  // スプリッターは倒すと分裂する
                   if (enemy.type.name === 'スプリッター' && enemy.splitCount && enemy.splitCount > 0) {
-                    const currentEnemyCount = this.enemies.filter(e => e.isAlive).length;
-                    const canSplit = currentEnemyCount < this.maxEnemies;
-                    
-                    if (canSplit) {
-                      const splitCount = Math.min(enemy.type.splitCount, this.maxEnemies - currentEnemyCount);
-                      for (let i = 0; i < splitCount; i++) {
-                        const angle = (Math.PI * 2 / enemy.type.splitCount) * i;
-                        const offsetX = Math.cos(angle) * 30;
-                        const offsetY = Math.sin(angle) * 30;
-                        
-                        this.enemies.push({
-                          type: enemy.type,
-                          position: { x: enemy.position.x + offsetX, y: enemy.position.y + offsetY },
-                          velocity: { x: 0, y: 0 },
-                          radius: enemy.radius * 0.7,
-                          speed: enemy.speed * 1.2,
-                          hp: enemy.maxHp * 0.5,
-                          maxHp: enemy.maxHp * 0.5,
-                          damage: enemy.damage * 0.7,
-                          xpValue: Math.ceil(enemy.xpValue * 0.5),
-                          isAlive: true,
-                          damageFlash: 0,
-                          lastShootTime: 0,
-                          targetX: this.player.position.x,
-                          targetY: this.player.position.y,
-                          splitCount: 0, // 分裂済みはもう分裂しない
-                        });
-                      }
+                    for (let i = 0; i < enemy.type.splitCount; i++) {
+                      const angle = (Math.PI * 2 / enemy.type.splitCount) * i;
+                      const offsetX = Math.cos(angle) * 30;
+                      const offsetY = Math.sin(angle) * 30;
+                      
+                      this.enemies.push({
+                        type: enemy.type,
+                        position: { x: enemy.position.x + offsetX, y: enemy.position.y + offsetY },
+                        velocity: { x: 0, y: 0 },
+                        radius: enemy.radius * 0.7,
+                        speed: enemy.speed * 1.2,
+                        hp: enemy.maxHp * 0.5,
+                        maxHp: enemy.maxHp * 0.5,
+                        damage: enemy.damage * 0.7,
+                        xpValue: Math.ceil(enemy.xpValue * 0.5),
+                        isAlive: true,
+                        damageFlash: 0,
+                        lastShootTime: 0,
+                        targetX: this.player.position.x,
+                        targetY: this.player.position.y,
+                        splitCount: 0, // 分裂済みはもう分裂しない
+                      });
                     }
                   }
 
@@ -2738,9 +2641,9 @@
           this.ctx.fillStyle = gradient;
           this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-          // 背景の星（モバイルは20個、PCは50個）
-          const starCount = this.isMobile ? 20 : 50;
+          // 軽量版では星の数を削減
           this.ctx.fillStyle = '#ffffff';
+          const starCount = this.isLowSpec ? 20 : 50;
           for (let i = 0; i < starCount; i++) {
             const x = (i * 137.5) % this.canvas.width;
             const y = (i * 213.7) % this.canvas.height;
@@ -2750,43 +2653,36 @@
           this.xpOrbs.forEach(orb => {
             this.ctx.save();
             
-            if (this.isMobile) {
-              // スマホ：超シンプルな円のみ
-              this.ctx.beginPath();
-              this.ctx.arc(orb.position.x, orb.position.y, orb.radius, 0, Math.PI * 2);
-              this.ctx.fillStyle = orb.isBossOrb ? '#ffd700' : '#00ffff';
-              this.ctx.fill();
-            } else {
-              // PC：フルエフェクト
-              const time = performance.now() / 300;
-              const pulse = Math.sin(time) * 0.2 + 1;
+            const time = performance.now() / 300;
+            const pulse = Math.sin(time) * 0.2 + 1;
+            
+            if (orb.isBossOrb) {
+              // 中ボスオーブ: キラキラエフェクト
+              this.ctx.shadowColor = '#ffd700';
+              this.ctx.shadowBlur = this.isLowSpec ? 10 : 25;
               
-              if (orb.isBossOrb) {
-                // 中ボスオーブ: キラキラエフェクト
-                this.ctx.shadowColor = '#ffd700';
-                this.ctx.shadowBlur = 25;
-                
-                const angle = time % (Math.PI * 2);
-                const gradient = this.ctx.createRadialGradient(
-                  orb.position.x, orb.position.y, 0,
-                  orb.position.x, orb.position.y, orb.radius * pulse
-                );
-                
-                const hue = (time * 50) % 360;
-                gradient.addColorStop(0, `hsl(${hue}, 100%, 90%)`);
-                gradient.addColorStop(0.5, `hsl(${(hue + 60) % 360}, 100%, 70%)`);
-                gradient.addColorStop(1, `hsl(${(hue + 120) % 360}, 100%, 50%)`);
-                
-                this.ctx.beginPath();
-                this.ctx.arc(orb.position.x, orb.position.y, orb.radius * pulse, 0, Math.PI * 2);
-                this.ctx.fillStyle = gradient;
-                this.ctx.fill();
-                
-                this.ctx.strokeStyle = '#ffd700';
-                this.ctx.lineWidth = 3;
-                this.ctx.stroke();
-                
-                // キラキラ星
+              const angle = time % (Math.PI * 2);
+              const gradient = this.ctx.createRadialGradient(
+                orb.position.x, orb.position.y, 0,
+                orb.position.x, orb.position.y, orb.radius * pulse
+              );
+              
+              const hue = (time * 50) % 360;
+              gradient.addColorStop(0, `hsl(${hue}, 100%, 90%)`);
+              gradient.addColorStop(0.5, `hsl(${(hue + 60) % 360}, 100%, 70%)`);
+              gradient.addColorStop(1, `hsl(${(hue + 120) % 360}, 100%, 50%)`);
+              
+              this.ctx.beginPath();
+              this.ctx.arc(orb.position.x, orb.position.y, orb.radius * pulse, 0, Math.PI * 2);
+              this.ctx.fillStyle = gradient;
+              this.ctx.fill();
+              
+              this.ctx.strokeStyle = '#ffd700';
+              this.ctx.lineWidth = 3;
+              this.ctx.stroke();
+              
+              // キラキラ星(軽量版では省略)
+              if (!this.isLowSpec) {
                 for (let i = 0; i < 4; i++) {
                   const starAngle = angle + (i * Math.PI / 2);
                   const starDist = orb.radius * pulse + 5;
@@ -2798,8 +2694,23 @@
                   this.ctx.arc(starX, starY, 3, 0, Math.PI * 2);
                   this.ctx.fill();
                 }
+              }
+            } else {
+              // 通常オーブ
+              if (this.isLowSpec) {
+                // 軽量版: シンプルな円
+                this.ctx.shadowColor = '#00ffff';
+                this.ctx.shadowBlur = 8;
+                
+                this.ctx.beginPath();
+                this.ctx.arc(orb.position.x, orb.position.y, orb.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#00ffff';
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
               } else {
-                // 通常オーブ: 明るい青緑で光る六角形
+                // 通常版: 六角形
                 this.ctx.shadowColor = '#00ffff';
                 this.ctx.shadowBlur = 15;
                 
@@ -2847,7 +2758,7 @@
 
           this.enemies.forEach(enemy => {
             if (enemy.isAlive) {
-              drawEnemy(this.ctx, enemy, this.reducedEffects);
+              drawEnemy(this.ctx, enemy);
             }
           });
 
@@ -2855,62 +2766,77 @@
             if (proj.isAlive) {
               this.ctx.save();
               
-              // 外側の強い光
-              this.ctx.shadowColor = '#ff0000';
-              this.ctx.shadowBlur = 25;
-              
-              // 光のオーラ（外側）
-              const outerGradient = this.ctx.createRadialGradient(
-                proj.position.x, proj.position.y, 0,
-                proj.position.x, proj.position.y, proj.radius * 3
-              );
-              outerGradient.addColorStop(0, 'rgba(255, 100, 100, 0.8)');
-              outerGradient.addColorStop(0.4, 'rgba(255, 50, 50, 0.4)');
-              outerGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
-              
-              this.ctx.beginPath();
-              this.ctx.arc(proj.position.x, proj.position.y, proj.radius * 3, 0, Math.PI * 2);
-              this.ctx.fillStyle = outerGradient;
-              this.ctx.fill();
-              
-              // 本体（明るく）
-              this.ctx.shadowBlur = 15;
-              this.ctx.shadowColor = '#ff3333';
-              
-              const bodyGradient = this.ctx.createRadialGradient(
-                proj.position.x, proj.position.y, 0,
-                proj.position.x, proj.position.y, proj.radius
-              );
-              bodyGradient.addColorStop(0, '#ffaaaa');
-              bodyGradient.addColorStop(0.6, '#ff3333');
-              bodyGradient.addColorStop(1, '#cc0000');
-              
-              this.ctx.beginPath();
-              this.ctx.arc(proj.position.x, proj.position.y, proj.radius, 0, Math.PI * 2);
-              this.ctx.fillStyle = bodyGradient;
-              this.ctx.fill();
-              
-              // 中心の強いハイライト
-              const highlightGradient = this.ctx.createRadialGradient(
-                proj.position.x - proj.radius * 0.3, 
-                proj.position.y - proj.radius * 0.3, 
-                0,
-                proj.position.x, 
-                proj.position.y, 
-                proj.radius * 0.6
-              );
-              highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-              highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-              
-              this.ctx.beginPath();
-              this.ctx.arc(proj.position.x, proj.position.y, proj.radius, 0, Math.PI * 2);
-              this.ctx.fillStyle = highlightGradient;
-              this.ctx.fill();
-              
-              // 光る縁取り
-              this.ctx.strokeStyle = '#ffaaaa';
-              this.ctx.lineWidth = 2;
-              this.ctx.stroke();
+              if (this.isLowSpec) {
+                // 軽量版: シンプルな赤い円
+                this.ctx.shadowColor = '#ff0000';
+                this.ctx.shadowBlur = 10;
+                
+                this.ctx.beginPath();
+                this.ctx.arc(proj.position.x, proj.position.y, proj.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#ff3333';
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#ffaaaa';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+              } else {
+                // 通常版: 派手なエフェクト
+                // 外側の強い光
+                this.ctx.shadowColor = '#ff0000';
+                this.ctx.shadowBlur = 25;
+                
+                // 光のオーラ（外側）
+                const outerGradient = this.ctx.createRadialGradient(
+                  proj.position.x, proj.position.y, 0,
+                  proj.position.x, proj.position.y, proj.radius * 3
+                );
+                outerGradient.addColorStop(0, 'rgba(255, 100, 100, 0.8)');
+                outerGradient.addColorStop(0.4, 'rgba(255, 50, 50, 0.4)');
+                outerGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                
+                this.ctx.beginPath();
+                this.ctx.arc(proj.position.x, proj.position.y, proj.radius * 3, 0, Math.PI * 2);
+                this.ctx.fillStyle = outerGradient;
+                this.ctx.fill();
+                
+                // 本体（明るく）
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = '#ff3333';
+                
+                const bodyGradient = this.ctx.createRadialGradient(
+                  proj.position.x, proj.position.y, 0,
+                  proj.position.x, proj.position.y, proj.radius
+                );
+                bodyGradient.addColorStop(0, '#ffaaaa');
+                bodyGradient.addColorStop(0.6, '#ff3333');
+                bodyGradient.addColorStop(1, '#cc0000');
+                
+                this.ctx.beginPath();
+                this.ctx.arc(proj.position.x, proj.position.y, proj.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = bodyGradient;
+                this.ctx.fill();
+                
+                // 中心の強いハイライト
+                const highlightGradient = this.ctx.createRadialGradient(
+                  proj.position.x - proj.radius * 0.3, 
+                  proj.position.y - proj.radius * 0.3, 
+                  0,
+                  proj.position.x, 
+                  proj.position.y, 
+                  proj.radius * 0.6
+                );
+                highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                this.ctx.beginPath();
+                this.ctx.arc(proj.position.x, proj.position.y, proj.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = highlightGradient;
+                this.ctx.fill();
+                
+                // 光る縁取り
+                this.ctx.strokeStyle = '#ffaaaa';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+              }
               
               this.ctx.restore();
             }
@@ -2949,7 +2875,7 @@
             }
           });
 
-          drawPlayer(this.ctx, this.player, this.playerImage, performance.now());
+          drawPlayer(this.ctx, this.player, this.playerImage, performance.now(), this.isLowSpec);
 
           if (this.itemNotification) {
             const elapsed = performance.now() - this.itemNotificationTime;
