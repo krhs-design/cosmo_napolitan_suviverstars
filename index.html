@@ -531,6 +531,16 @@
       transform: translateX(30px);
     }
 
+    .toggle-switch.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: rgba(150, 150, 150, 0.3);
+    }
+
+    .sound-setting.disabled {
+      opacity: 0.5;
+    }
+
     .btn-danger {
       background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
       box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
@@ -1668,6 +1678,31 @@
           this.gameoverModal = document.getElementById('gameover-modal');
           this.gameclearModal = document.getElementById('gameclear-modal');
           this.upgradeOptions = document.getElementById('upgrade-options');
+          
+          // スマホの場合、音楽選択を非表示にしてスタートボタンを直接表示
+          if (this.isUltraLowSpec) {
+            const musicSelection = document.getElementById('music-selection');
+            const startBtn = document.getElementById('start-btn');
+            if (musicSelection) musicSelection.style.display = 'none';
+            if (startBtn) startBtn.style.display = 'inline-block';
+            
+            // BGM・効果音トグルを非活性化
+            const bgmToggle = document.getElementById('bgm-toggle');
+            const sfxToggle = document.getElementById('sfx-toggle');
+            const soundSettings = document.querySelectorAll('.sound-setting');
+            
+            if (bgmToggle) {
+              bgmToggle.classList.add('disabled');
+              bgmToggle.classList.remove('active');
+            }
+            if (sfxToggle) {
+              sfxToggle.classList.add('disabled');
+              sfxToggle.classList.remove('active');
+            }
+            soundSettings.forEach(setting => {
+              setting.classList.add('disabled');
+            });
+          }
           this.buffsContainer = document.getElementById('buffs');
 
           this.pauseBtn = document.getElementById('pause-btn');
@@ -1886,6 +1921,9 @@
 
           // BGMトグル
           document.getElementById('bgm-toggle').addEventListener('click', (e) => {
+            // スマホの場合は無効
+            if (this.isUltraLowSpec) return;
+            
             this.bgmEnabled = !this.bgmEnabled;
             e.currentTarget.classList.toggle('active', this.bgmEnabled);
             
@@ -1898,6 +1936,9 @@
 
           // 効果音トグル
           document.getElementById('sfx-toggle').addEventListener('click', (e) => {
+            // スマホの場合は無効
+            if (this.isUltraLowSpec) return;
+            
             this.sfxEnabled = !this.sfxEnabled;
             e.currentTarget.classList.toggle('active', this.sfxEnabled);
           });
