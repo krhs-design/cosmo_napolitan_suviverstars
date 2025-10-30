@@ -1365,75 +1365,50 @@
           this.bgmEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
           this.sfxEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
 
-          // BGMの初期化(スマホは読み込まない、タブレット・PCは読み込む)
-          if (!this.isUltraLowSpec) {
-            this.bgm = {
-              title: new Audio('audio/title_bgm.mp3'),
-              normal: new Audio('audio/normal_bgm.mp3'),
-              miniboss: new Audio('audio/miniboss_bgm.mp3'),
-              finalboss: new Audio('audio/finalboss_bgm.mp3'),
-              clear: new Audio('audio/clear_bgm.mp3'),
-              gameover: new Audio('audio/gameover_bgm.mp3'),
-              current: null
-            };
-            
-            // BGMをループ設定
-            this.bgm.title.loop = true;
-            this.bgm.normal.loop = true;
-            this.bgm.miniboss.loop = true;
-            this.bgm.finalboss.loop = true;
-            this.bgm.clear.loop = true;
-            this.bgm.gameover.loop = true;
-            
-            // BGMの音量設定
-            this.bgm.title.volume = 0.5;
-            this.bgm.normal.volume = 0.5;
-            this.bgm.miniboss.volume = 0.6;
-            this.bgm.finalboss.volume = 0.7;
-            this.bgm.clear.volume = 0.6;
-            this.bgm.gameover.volume = 0.5;
-          } else {
-            // スマホはダミーオブジェクト
-            this.bgm = {
-              title: null,
-              normal: null,
-              miniboss: null,
-              finalboss: null,
-              clear: null,
-              gameover: null,
-              current: null
-            };
-          }
+          // BGMの初期化(全デバイスで読み込む - スマホでもユーザーが選べるように)
+          this.bgm = {
+            title: new Audio('audio/title_bgm.mp3'),
+            normal: new Audio('audio/normal_bgm.mp3'),
+            miniboss: new Audio('audio/miniboss_bgm.mp3'),
+            finalboss: new Audio('audio/finalboss_bgm.mp3'),
+            clear: new Audio('audio/clear_bgm.mp3'),
+            gameover: new Audio('audio/gameover_bgm.mp3'),
+            current: null
+          };
+          
+          // BGMをループ設定
+          this.bgm.title.loop = true;
+          this.bgm.normal.loop = true;
+          this.bgm.miniboss.loop = true;
+          this.bgm.finalboss.loop = true;
+          this.bgm.clear.loop = true;
+          this.bgm.gameover.loop = true;
+          
+          // BGMの音量設定
+          this.bgm.title.volume = 0.5;
+          this.bgm.normal.volume = 0.5;
+          this.bgm.miniboss.volume = 0.6;
+          this.bgm.finalboss.volume = 0.7;
+          this.bgm.clear.volume = 0.6;
+          this.bgm.gameover.volume = 0.5;
 
-          // 効果音の初期化(スマホは読み込まない、タブレット・PCは読み込む)
-          if (!this.isUltraLowSpec) {
-            this.sfx = {
-              playerHit: new Audio('audio/player_damage.mp3'),
-              enemyHit: new Audio('audio/enemy_hit.mp3'),
-              enemyDeath: new Audio('audio/enemy_death.mp3'),
-              bossDeath: new Audio('audio/boss_death.mp3'),
-              gemGet: new Audio('audio/gem_get.mp3'),
-              itemGet: new Audio('audio/item_get.mp3')
-            };
-            
-            // 効果音の音量設定
-            this.sfx.playerHit.volume = 0.6;
-            this.sfx.enemyHit.volume = 0.15;
-            this.sfx.enemyDeath.volume = 0.5;
-            this.sfx.bossDeath.volume = 0.7;
-            this.sfx.gemGet.volume = 0.5;
-            this.sfx.itemGet.volume = 0.6;
-          } else {
-            // スマホはダミーオブジェクト
-            this.sfx = {
-              playerHit: null,
-              enemyHit: null,
-              enemyDeath: null,
-              bossDeath: null,
-              gemGet: null,
-              itemGet: null
-            };
-          }
+          // 効果音の初期化(全デバイスで読み込む)
+          this.sfx = {
+            playerHit: new Audio('audio/player_damage.mp3'),
+            enemyHit: new Audio('audio/enemy_hit.mp3'),
+            enemyDeath: new Audio('audio/enemy_death.mp3'),
+            bossDeath: new Audio('audio/boss_death.mp3'),
+            gemGet: new Audio('audio/gem_get.mp3'),
+            itemGet: new Audio('audio/item_get.mp3')
+          };
+          
+          // 効果音の音量設定
+          this.sfx.playerHit.volume = 0.6;
+          this.sfx.enemyHit.volume = 0.15;
+          this.sfx.enemyDeath.volume = 0.5;
+          this.sfx.bossDeath.volume = 0.7;
+          this.sfx.gemGet.volume = 0.5;
+          this.sfx.itemGet.volume = 0.6;
 
           this.activeEffects = {
             speedBoost: 0,
