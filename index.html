@@ -639,7 +639,7 @@
           hp: 22,
           speed: 0.8,
           damage: 5,
-          xp: 5,
+          xp: 3,
           spawnWeight: 50,
           minLevel: 1,
         },
@@ -651,7 +651,7 @@
           hp: 12,
           speed: 1.5,
           damage: 4,
-          xp: 8,
+          xp: 5,
           spawnWeight: 30,
           minLevel: 3,
         },
@@ -663,7 +663,7 @@
           hp: 18,
           speed: 0.7,
           damage: 5,
-          xp: 15,
+          xp: 10,
           spawnWeight: 25,
           shootInterval: 2500,
           minLevel: 6,
@@ -1352,79 +1352,54 @@
           // BGM設定
           this.currentBGM = null;
           
-          // サウンド設定(軽量版ではデフォルトOFF)
-          this.bgmEnabled = !this.isLowSpec; // スマホ・タブレットではBGM OFF
-          this.sfxEnabled = !this.isLowSpec; // スマホ・タブレットでは効果音 OFF
+          // サウンド設定(軽量版ではデフォルトOFF、でもユーザーが選択可能)
+          this.bgmEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
+          this.sfxEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
 
-          // BGMの初期化(軽量版ではスキップ)
-          if (!this.isLowSpec) {
-            this.bgm = {
-              title: new Audio('audio/title_bgm.mp3'),
-              normal: new Audio('audio/normal_bgm.mp3'),
-              miniboss: new Audio('audio/miniboss_bgm.mp3'),
-              finalboss: new Audio('audio/finalboss_bgm.mp3'),
-              clear: new Audio('audio/clear_bgm.mp3'),
-              gameover: new Audio('audio/gameover_bgm.mp3'),
-              current: null
-            };
-            
-            // BGMをループ設定
-            this.bgm.title.loop = true;
-            this.bgm.normal.loop = true;
-            this.bgm.miniboss.loop = true;
-            this.bgm.finalboss.loop = true;
-            this.bgm.clear.loop = true;
-            this.bgm.gameover.loop = true;
-            
-            // BGMの音量設定
-            this.bgm.title.volume = 0.5;
-            this.bgm.normal.volume = 0.5;
-            this.bgm.miniboss.volume = 0.6;
-            this.bgm.finalboss.volume = 0.7;
-            this.bgm.clear.volume = 0.6;
-            this.bgm.gameover.volume = 0.5;
-          } else {
-            // 軽量版ではダミーオブジェクト
-            this.bgm = {
-              title: null,
-              normal: null,
-              miniboss: null,
-              finalboss: null,
-              clear: null,
-              gameover: null,
-              current: null
-            };
-          }
+          // BGMの初期化(全デバイスで読み込む)
+          this.bgm = {
+            title: new Audio('audio/title_bgm.mp3'),
+            normal: new Audio('audio/normal_bgm.mp3'),
+            miniboss: new Audio('audio/miniboss_bgm.mp3'),
+            finalboss: new Audio('audio/finalboss_bgm.mp3'),
+            clear: new Audio('audio/clear_bgm.mp3'),
+            gameover: new Audio('audio/gameover_bgm.mp3'),
+            current: null
+          };
+          
+          // BGMをループ設定
+          this.bgm.title.loop = true;
+          this.bgm.normal.loop = true;
+          this.bgm.miniboss.loop = true;
+          this.bgm.finalboss.loop = true;
+          this.bgm.clear.loop = true;
+          this.bgm.gameover.loop = true;
+          
+          // BGMの音量設定
+          this.bgm.title.volume = 0.5;
+          this.bgm.normal.volume = 0.5;
+          this.bgm.miniboss.volume = 0.6;
+          this.bgm.finalboss.volume = 0.7;
+          this.bgm.clear.volume = 0.6;
+          this.bgm.gameover.volume = 0.5;
 
-          // 効果音の初期化(軽量版ではスキップ)
-          if (!this.isLowSpec) {
-            this.sfx = {
-              playerHit: new Audio('audio/player_damage.mp3'),
-              enemyHit: new Audio('audio/enemy_hit.mp3'),
-              enemyDeath: new Audio('audio/enemy_death.mp3'),
-              bossDeath: new Audio('audio/boss_death.mp3'),
-              gemGet: new Audio('audio/gem_get.mp3'),
-              itemGet: new Audio('audio/item_get.mp3')
-            };
-            
-            // 効果音の音量設定
-            this.sfx.playerHit.volume = 0.6;
-            this.sfx.enemyHit.volume = 0.15;
-            this.sfx.enemyDeath.volume = 0.5;
-            this.sfx.bossDeath.volume = 0.7;
-            this.sfx.gemGet.volume = 0.5;
-            this.sfx.itemGet.volume = 0.6;
-          } else {
-            // 軽量版ではダミーオブジェクト
-            this.sfx = {
-              playerHit: null,
-              enemyHit: null,
-              enemyDeath: null,
-              bossDeath: null,
-              gemGet: null,
-              itemGet: null
-            };
-          }
+          // 効果音の初期化(全デバイスで読み込む)
+          this.sfx = {
+            playerHit: new Audio('audio/player_damage.mp3'),
+            enemyHit: new Audio('audio/enemy_hit.mp3'),
+            enemyDeath: new Audio('audio/enemy_death.mp3'),
+            bossDeath: new Audio('audio/boss_death.mp3'),
+            gemGet: new Audio('audio/gem_get.mp3'),
+            itemGet: new Audio('audio/item_get.mp3')
+          };
+          
+          // 効果音の音量設定
+          this.sfx.playerHit.volume = 0.6;
+          this.sfx.enemyHit.volume = 0.15;
+          this.sfx.enemyDeath.volume = 0.5;
+          this.sfx.bossDeath.volume = 0.7;
+          this.sfx.gemGet.volume = 0.5;
+          this.sfx.itemGet.volume = 0.6;
 
           this.activeEffects = {
             speedBoost: 0,
@@ -1646,9 +1621,6 @@
           // サウンド設定がOFFの場合は再生しない
           if (!this.bgmEnabled) return;
           
-          // 軽量版の場合はBGMオブジェクトがないので何もしない
-          if (this.isLowSpec) return;
-          
           // 現在のタイプを保存
           this.currentBGM = type;
           
@@ -1666,9 +1638,6 @@
         }
 
         stopBGM() {
-          // 軽量版の場合は何もしない
-          if (this.isLowSpec) return;
-          
           if (this.bgm.current) {
             this.bgm.current.pause();
             this.bgm.current.currentTime = 0;
@@ -1679,9 +1648,6 @@
         playSFX(type) {
           // 効果音設定がOFFの場合は再生しない
           if (!this.sfxEnabled) return;
-          
-          // 軽量版の場合は効果音オブジェクトがないので何もしない
-          if (this.isLowSpec) return;
           
           if (this.sfx[type]) {
             // 音声を複製して再生（同時再生を可能に）
