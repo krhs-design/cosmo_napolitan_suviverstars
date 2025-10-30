@@ -1543,11 +1543,23 @@
 
           this.playerImage = new Image();
           this.playerImage.src = 'images/cosmo-napolitan.png';
+          this.playerImageLoaded = false;
+          
+          // プレイヤー画像の読み込み完了を待つ
+          this.playerImage.onload = () => {
+            this.playerImageLoaded = true;
+            console.log('✅ Player image loaded');
+          };
+          
+          this.playerImage.onerror = () => {
+            console.error('❌ Failed to load player image');
+            this.playerImageLoaded = true; // エラーでも進める
+          };
 
           this.player = {
             position: { x: canvas.width / 2, y: canvas.height / 2 },
             velocity: { x: 0, y: 0 },
-            radius: this.isUltraLowSpec ? 24 : 16, // スマホは1.5倍に
+            radius: this.isUltraLowSpec ? 28 : (this.isLowSpec ? 22 : 16), // スマホ1.75倍、タブレット1.375倍
             speed: 150,
             hp: 100,
             maxHp: 100,
@@ -1744,7 +1756,24 @@
           });
 
           // スタートボタン
-          startBtn.addEventListener('click', () => {
+          startBtn.addEventListener('click', async () => {
+            // プレイヤー画像の読み込みを待つ
+            if (!this.playerImageLoaded) {
+              console.log('⏳ Waiting for player image to load...');
+              await new Promise(resolve => {
+                if (this.playerImage.complete) {
+                  resolve();
+                } else {
+                  this.playerImage.onload = () => {
+                    this.playerImageLoaded = true;
+                    resolve();
+                  };
+                  // タイムアウト（3秒）
+                  setTimeout(resolve, 3000);
+                }
+              });
+            }
+            
             this.stopBGM(); // タイトルBGMを停止
             this.startModal.classList.add('hidden');
             this.start();
