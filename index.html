@@ -1626,19 +1626,36 @@
             musicOnBtn.disabled = true;
             musicOnBtn.textContent = '🔊 読み込み中...';
             
-            // AudioManagerを初期化してプリロード
-            await this.audioManager.init();
-            await this.audioManager.preloadAll(this.bgmList, this.sfxList);
-            
-            // タイトルBGMを再生
-            this.playBGM('title');
-            
-            // ボタンを元に戻す
-            musicOnBtn.disabled = false;
-            musicOnBtn.textContent = '🔊 音楽あり';
-            
-            // スタートボタンを表示
-            startBtn.style.display = 'inline-block';
+            try {
+              // AudioManagerを初期化してプリロード
+              console.log('🎵 Initializing AudioManager...');
+              await this.audioManager.init();
+              console.log('✅ AudioManager initialized');
+              
+              console.log('📥 Preloading audio files...');
+              await this.audioManager.preloadAll(this.bgmList, this.sfxList);
+              console.log('✅ All audio files loaded');
+              
+              // タイトルBGMを再生
+              console.log('▶️ Playing title BGM...');
+              this.playBGM('title');
+              
+              // ボタンを元に戻す
+              musicOnBtn.disabled = false;
+              musicOnBtn.textContent = '🔊 音楽あり';
+              
+              // スタートボタンを表示
+              startBtn.style.display = 'inline-block';
+            } catch (error) {
+              console.error('❌ Audio initialization failed:', error);
+              alert('音楽の読み込みに失敗しました。音楽なしで続行します。\nエラー: ' + error.message);
+              
+              // エラー時の処理
+              this.bgmEnabled = false;
+              musicOnBtn.disabled = false;
+              musicOnBtn.textContent = '🔊 音楽あり';
+              startBtn.style.display = 'inline-block';
+            }
           });
 
           // 音楽なしボタン
@@ -1789,7 +1806,7 @@
             e.currentTarget.classList.toggle('active', this.bgmEnabled);
             
             if (this.bgmEnabled && !this.isPaused) {
-              this.playBGM(this.currentBGM || 'normal');
+              this.playBGM(this.currentBGMName || 'normal');
             } else {
               this.stopBGM();
             }
