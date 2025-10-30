@@ -1294,6 +1294,189 @@
         return availableTypes[0];
       }
 
+      // Web Audio API を使った軽量オーディオマネージャー
+      class AudioManager {
+        constructor() {
+          this.audioContext = null;
+          this.bgmBuffers = {}; // デコード済みバッファのキャッシュ
+          this.sfxBuffers = {}; // 効果音バッファのキャッシュ
+          this.currentBGM = null; // 現在再生中のBGMソース
+          this.bgmGainNode = null; // BGM音量コントロール
+          this.sfxGainNode = null; // 効果音音量コントロール
+          this.isInitialized = false;
+          this.isPreloading = false;
+          this.preloadProgress = 0;
+        }
+
+        // AudioContextを初期化（ユーザー操作後に呼ぶ）
+        async init() {
+          if (this.isInitialized) return;
+
+          try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // ゲインノードを作成
+            this.bgmGainNode = this.audioContext.createGain();
+            this.bgmGainNode.connect(this.audioContext.destination);
+            
+            this.sfxGainNode = this.audioContext.createGain();
+            this.sfxGainNode.connect(this.audioContext.destination);
+            
+            // iOS/Android対応: コンテキストをresumeする
+            if (this.audioContext.state === 'suspended') {
+              await this.audioContext.resume();
+            }
+            
+            this.isInitialized = true;
+            console.log('🎵 AudioContext initialized');
+          } catch (error) {
+            console.error('AudioContext initialization failed:', error);
+          }
+        }
+
+        // 音声ファイルを非同期プリロード
+        async preloadAudio(name, url, type = 'bgm') {
+          if (!this.isInitialized) {
+            console.warn('AudioContext not initialized');
+            return;
+          }
+
+          try {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+            
+            if (type === 'bgm') {
+              this.bgmBuffers[name] = audioBuffer;
+            } else {
+              this.sfxBuffers[name] = audioBuffer;
+            }
+            
+            console.log(`✅ Loaded: ${name}`);
+          } catch (error) {
+            console.error(`Failed to load ${name}:`, error);
+          }
+        }
+
+        // 複数の音声をまとめてプリロード
+        async preloadAll(bgmList, sfxList) {
+          if (!this.isInitialized) {
+            await this.init();
+          }
+
+          this.isPreloading = true;
+          const totalFiles = bgmList.length + sfxList.length;
+          let loadedFiles = 0;
+
+          const updateProgress = () => {
+            loadedFiles++;
+            this.preloadProgress = (loadedFiles / totalFiles) * 100;
+          };
+
+          const bgmPromises = bgmList.map(item => 
+            this.preloadAudio(item.name, item.url, 'bgm').then(updateProgress)
+          );
+          
+          const sfxPromises = sfxList.map(item => 
+            this.preloadAudio(item.name, item.url, 'sfx').then(updateProgress)
+          );
+
+          await Promise.all([...bgmPromises, ...sfxPromises]);
+          
+          this.isPreloading = false;
+          console.log('🎉 All audio files loaded!');
+        }
+
+        // BGMを再生（ループ対応）
+        playBGM(name, volume = 0.5) {
+          if (!this.isInitialized || !this.bgmBuffers[name]) {
+            console.warn(`BGM ${name} not loaded`);
+            return;
+          }
+
+          // 現在のBGMを停止
+          this.stopBGM();
+
+          try {
+            // 新しいソースを作成
+            const source = this.audioContext.createBufferSource();
+            source.buffer = this.bgmBuffers[name];
+            source.loop = true; // ループ再生
+            source.connect(this.bgmGainNode);
+            
+            // 音量設定
+            this.bgmGainNode.gain.value = volume;
+            
+            // 再生開始
+            source.start(0);
+            
+            this.currentBGM = source;
+            console.log(`🎵 Playing BGM: ${name}`);
+          } catch (error) {
+            console.error(`Failed to play BGM ${name}:`, error);
+          }
+        }
+
+        // BGMを停止
+        stopBGM() {
+          if (this.currentBGM) {
+            try {
+              this.currentBGM.stop();
+              this.currentBGM.disconnect();
+            } catch (error) {
+              // すでに停止している場合のエラーを無視
+            }
+            this.currentBGM = null;
+          }
+        }
+
+        // 効果音を再生（同時再生可能）
+        playSFX(name, volume = 0.5) {
+          if (!this.isInitialized || !this.sfxBuffers[name]) {
+            console.warn(`SFX ${name} not loaded`);
+            return;
+          }
+
+          try {
+            const source = this.audioContext.createBufferSource();
+            source.buffer = this.sfxBuffers[name];
+            source.connect(this.sfxGainNode);
+            
+            // 音量設定
+            this.sfxGainNode.gain.value = volume;
+            
+            // 再生開始（ループなし）
+            source.start(0);
+            
+            // 再生終了後に自動的にクリーンアップ
+            source.onended = () => {
+              source.disconnect();
+            };
+          } catch (error) {
+            console.error(`Failed to play SFX ${name}:`, error);
+          }
+        }
+
+        // BGM音量を変更
+        setBGMVolume(volume) {
+          if (this.bgmGainNode) {
+            this.bgmGainNode.gain.value = volume;
+          }
+        }
+
+        // 効果音音量を変更
+        setSFXVolume(volume) {
+          if (this.sfxGainNode) {
+            this.sfxGainNode.gain.value = volume;
+          }
+        }
+
+        // AudioContextのステートを確認
+        getState() {
+          return this.audioContext ? this.audioContext.state : 'not initialized';
+        }
+      }
+
       class Game {
         constructor(canvas) {
           this.canvas = canvas;
@@ -1358,57 +1541,35 @@
             level: 1,
           };
 
-          // BGM設定
-          this.currentBGM = null;
+          // 新しいオーディオマネージャーを使用
+          this.audioManager = new AudioManager();
+          this.currentBGMName = null;
           
-          // サウンド設定(軽量版ではデフォルトOFF、でもユーザーが選択可能)
-          this.bgmEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
-          this.sfxEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
+          // サウンド設定
+          // スマホ: BGM OFF、効果音 ON
+          // タブレット・PC: デフォルトOFF(ユーザーが選択)
+          this.bgmEnabled = !this.isLowSpec; // スマホ・タブレットではBGM OFF
+          this.sfxEnabled = this.isUltraLowSpec ? true : !this.isLowSpec; // スマホは効果音ON、タブレットはOFF
+          
+          // 音声ファイルのリスト
+          this.bgmList = this.isUltraLowSpec ? [] : [
+            { name: 'title', url: 'audio/title_bgm.mp3' },
+            { name: 'normal', url: 'audio/normal_bgm.mp3' },
+            { name: 'miniboss', url: 'audio/miniboss_bgm.mp3' },
+            { name: 'finalboss', url: 'audio/finalboss_bgm.mp3' },
+            { name: 'clear', url: 'audio/clear_bgm.mp3' },
+            { name: 'gameover', url: 'audio/gameover_bgm.mp3' }
+          ];
+          
+          this.sfxList = [
+            { name: 'playerHit', url: 'audio/player_damage.mp3' },
+            { name: 'enemyHit', url: 'audio/enemy_hit.mp3' },
+            { name: 'enemyDeath', url: 'audio/enemy_death.mp3' },
+            { name: 'bossDeath', url: 'audio/boss_death.mp3' },
+            { name: 'gemGet', url: 'audio/gem_get.mp3' },
+            { name: 'itemGet', url: 'audio/item_get.mp3' }
+          ];
 
-          // BGMの初期化(全デバイスで読み込む - スマホでもユーザーが選べるように)
-          this.bgm = {
-            title: new Audio('audio/title_bgm.mp3'),
-            normal: new Audio('audio/normal_bgm.mp3'),
-            miniboss: new Audio('audio/miniboss_bgm.mp3'),
-            finalboss: new Audio('audio/finalboss_bgm.mp3'),
-            clear: new Audio('audio/clear_bgm.mp3'),
-            gameover: new Audio('audio/gameover_bgm.mp3'),
-            current: null
-          };
-          
-          // BGMをループ設定
-          this.bgm.title.loop = true;
-          this.bgm.normal.loop = true;
-          this.bgm.miniboss.loop = true;
-          this.bgm.finalboss.loop = true;
-          this.bgm.clear.loop = true;
-          this.bgm.gameover.loop = true;
-          
-          // BGMの音量設定
-          this.bgm.title.volume = 0.5;
-          this.bgm.normal.volume = 0.5;
-          this.bgm.miniboss.volume = 0.6;
-          this.bgm.finalboss.volume = 0.7;
-          this.bgm.clear.volume = 0.6;
-          this.bgm.gameover.volume = 0.5;
-
-          // 効果音の初期化(全デバイスで読み込む)
-          this.sfx = {
-            playerHit: new Audio('audio/player_damage.mp3'),
-            enemyHit: new Audio('audio/enemy_hit.mp3'),
-            enemyDeath: new Audio('audio/enemy_death.mp3'),
-            bossDeath: new Audio('audio/boss_death.mp3'),
-            gemGet: new Audio('audio/gem_get.mp3'),
-            itemGet: new Audio('audio/item_get.mp3')
-          };
-          
-          // 効果音の音量設定
-          this.sfx.playerHit.volume = 0.6;
-          this.sfx.enemyHit.volume = 0.15;
-          this.sfx.enemyDeath.volume = 0.5;
-          this.sfx.bossDeath.volume = 0.7;
-          this.sfx.gemGet.volume = 0.5;
-          this.sfx.itemGet.volume = 0.6;
 
           this.activeEffects = {
             speedBoost: 0,
@@ -1451,7 +1612,7 @@
           const startBtn = document.getElementById('start-btn');
 
           // 音楽ありボタン
-          musicOnBtn.addEventListener('click', () => {
+          musicOnBtn.addEventListener('click', async () => {
             this.bgmEnabled = true;
             this.sfxEnabled = true; // 効果音もONに
             document.getElementById('bgm-toggle').classList.add('active');
@@ -1461,15 +1622,27 @@
             musicOnBtn.classList.add('btn-selected');
             musicOffBtn.classList.remove('btn-selected');
             
+            // ボタンを無効化（ロード中）
+            musicOnBtn.disabled = true;
+            musicOnBtn.textContent = '🔊 読み込み中...';
+            
+            // AudioManagerを初期化してプリロード
+            await this.audioManager.init();
+            await this.audioManager.preloadAll(this.bgmList, this.sfxList);
+            
             // タイトルBGMを再生
             this.playBGM('title');
+            
+            // ボタンを元に戻す
+            musicOnBtn.disabled = false;
+            musicOnBtn.textContent = '🔊 音楽あり';
             
             // スタートボタンを表示
             startBtn.style.display = 'inline-block';
           });
 
           // 音楽なしボタン
-          musicOffBtn.addEventListener('click', () => {
+          musicOffBtn.addEventListener('click', async () => {
             this.bgmEnabled = false;
             this.sfxEnabled = false; // 効果音もOFFに
             document.getElementById('bgm-toggle').classList.remove('active');
@@ -1478,6 +1651,18 @@
             // ボタンのハイライト
             musicOffBtn.classList.add('btn-selected');
             musicOnBtn.classList.remove('btn-selected');
+            
+            // 音楽なしの場合も、効果音のためにAudioManagerを初期化
+            if (!this.audioManager.isInitialized) {
+              musicOffBtn.disabled = true;
+              musicOffBtn.textContent = '🔇 読み込み中...';
+              
+              await this.audioManager.init();
+              await this.audioManager.preloadAll([], this.sfxList); // 効果音のみロード
+              
+              musicOffBtn.disabled = false;
+              musicOffBtn.textContent = '🔇 音楽なし';
+            }
             
             // BGMを停止
             this.stopBGM();
@@ -1631,39 +1816,44 @@
           if (!this.bgmEnabled) return;
           
           // 現在のタイプを保存
-          this.currentBGM = type;
+          this.currentBGMName = type;
           
-          // 現在のBGMを停止
-          if (this.bgm.current) {
-            this.bgm.current.pause();
-            this.bgm.current.currentTime = 0;
-          }
+          // 音量マップ
+          const volumeMap = {
+            'title': 0.5,
+            'normal': 0.5,
+            'miniboss': 0.6,
+            'finalboss': 0.7,
+            'clear': 0.6,
+            'gameover': 0.5
+          };
           
-          // 新しいBGMを再生
-          if (this.bgm[type]) {
-            this.bgm.current = this.bgm[type];
-            this.bgm.current.play().catch(e => console.log('BGM play failed:', e));
-          }
+          // AudioManagerで再生
+          const volume = volumeMap[type] || 0.5;
+          this.audioManager.playBGM(type, volume);
         }
 
         stopBGM() {
-          if (this.bgm.current) {
-            this.bgm.current.pause();
-            this.bgm.current.currentTime = 0;
-            this.bgm.current = null;
-          }
+          this.audioManager.stopBGM();
         }
 
         playSFX(type) {
           // 効果音設定がOFFの場合は再生しない
           if (!this.sfxEnabled) return;
           
-          if (this.sfx[type]) {
-            // 音声を複製して再生（同時再生を可能に）
-            const sound = this.sfx[type].cloneNode();
-            sound.volume = this.sfx[type].volume;
-            sound.play().catch(e => console.log('SFX play failed:', e));
-          }
+          // 音量マップ
+          const volumeMap = {
+            'playerHit': 0.6,
+            'enemyHit': 0.15,
+            'enemyDeath': 0.5,
+            'bossDeath': 0.7,
+            'gemGet': 0.5,
+            'itemGet': 0.6
+          };
+          
+          // AudioManagerで再生
+          const volume = volumeMap[type] || 0.5;
+          this.audioManager.playSFX(type, volume);
         }
 
         togglePause() {
@@ -1682,7 +1872,7 @@
             // 再開時はBGMを再生
             this.lastTime = performance.now();
             if (this.bgmEnabled) {
-              this.playBGM(this.currentBGM || 'normal');
+              this.playBGM(this.currentBGMName || 'normal');
             }
             this.gameLoop(this.lastTime);
           }
