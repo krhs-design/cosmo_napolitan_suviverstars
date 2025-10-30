@@ -1679,11 +1679,26 @@
           this.gameclearModal = document.getElementById('gameclear-modal');
           this.upgradeOptions = document.getElementById('upgrade-options');
           
-          // スマホの場合、音楽選択を非表示にしてスタートボタンを直接表示
+          // スマホの場合、音楽選択ボタンを非活性にしてスタートボタンのみ表示
           if (this.isUltraLowSpec) {
             const musicSelection = document.getElementById('music-selection');
+            const musicOnBtn = document.getElementById('music-on-btn');
+            const musicOffBtn = document.getElementById('music-off-btn');
             const startBtn = document.getElementById('start-btn');
-            if (musicSelection) musicSelection.style.display = 'none';
+            
+            // 音楽選択ボタンを非活性化（非表示にせず、グレーアウト）
+            if (musicOnBtn) {
+              musicOnBtn.disabled = true;
+              musicOnBtn.style.opacity = '0.5';
+              musicOnBtn.style.cursor = 'not-allowed';
+            }
+            if (musicOffBtn) {
+              musicOffBtn.disabled = true;
+              musicOffBtn.style.opacity = '0.5';
+              musicOffBtn.style.cursor = 'not-allowed';
+            }
+            
+            // スタートボタンを表示
             if (startBtn) startBtn.style.display = 'inline-block';
             
             // BGM・効果音トグルを非活性化
