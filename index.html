@@ -749,7 +749,7 @@
         }
       };
 
-      function drawPlayer(ctx, player, img, time, isLowSpec = false) {
+      function drawPlayer(ctx, player, img, time, isLowSpec = false, isUltraLowSpec = false) {
         ctx.save();
         
         // 無敵時のエフェクト
@@ -758,8 +758,11 @@
         if (isInvincible) {
           // 虹色のオーラ
           const hue = (time / 10) % 360;
-          ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
-          ctx.shadowBlur = isLowSpec ? 15 : 30;
+          // スマホはshadowBlurなし
+          if (!isUltraLowSpec) {
+            ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+            ctx.shadowBlur = isLowSpec ? 15 : 30;
+          }
           
           if (isLowSpec) {
             // 軽量版: シンプルな虹色の輪1つ
@@ -815,8 +818,11 @@
         
         if (player.shield > 0) {
           const shimmer = Math.sin(time / 200) * 0.3 + 0.7;
-          ctx.shadowColor = `rgba(72, 219, 251, ${shimmer})`;
-          ctx.shadowBlur = 20;
+          // スマホはshadowBlurなし
+          if (!isUltraLowSpec) {
+            ctx.shadowColor = `rgba(72, 219, 251, ${shimmer})`;
+            ctx.shadowBlur = 20;
+          }
           ctx.strokeStyle = `rgba(72, 219, 251, ${shimmer})`;
           ctx.lineWidth = 3;
           ctx.beginPath();
@@ -828,8 +834,9 @@
         ctx.shadowBlur = 0;
 
         if (img && img.complete) {
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
+          // スマホは画質を下げる
+          ctx.imageSmoothingEnabled = !isUltraLowSpec;
+          ctx.imageSmoothingQuality = isUltraLowSpec ? 'low' : 'high';
           
           ctx.globalCompositeOperation = 'source-over';
           
@@ -1297,10 +1304,11 @@
           this.lastTime = 0;
           this.gameTime = 0;
           
-          // デバイス判定(スマホとタブレットを軽量版にする)
+          // デバイス判定(スマホは超軽量版、タブレットは軽量版)
           this.isMobile = window.innerWidth <= 600;
           this.isTablet = window.innerWidth > 600 && window.innerWidth <= 820;
-          this.isLowSpec = this.isMobile || this.isTablet;
+          this.isUltraLowSpec = this.isMobile; // スマホ専用超軽量モード
+          this.isLowSpec = this.isMobile || this.isTablet; // 従来の軽量モード
 
           this.playerImage = new Image();
           this.playerImage.src = 'images/cosmo-napolitan.png';
@@ -1308,7 +1316,7 @@
           this.player = {
             position: { x: canvas.width / 2, y: canvas.height / 2 },
             velocity: { x: 0, y: 0 },
-            radius: 16,
+            radius: this.isUltraLowSpec ? 24 : 16, // スマホは1.5倍に
             speed: 150,
             hp: 100,
             maxHp: 100,
@@ -1338,7 +1346,8 @@
 
           this.lastShootTime = 0;
           this.lastEnemySpawnTime = 0;
-          this.enemySpawnInterval = 1500;
+          // スマホは敵のスポーン間隔を2倍に
+          this.enemySpawnInterval = this.isUltraLowSpec ? 3000 : 1500;
           this.lastBossLevel = 0; // 最後にボスを出現させたレベル
           this.finalBossSpawned = false; // 最終ボスが出現したか
 
@@ -1356,50 +1365,75 @@
           this.bgmEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
           this.sfxEnabled = !this.isLowSpec; // スマホ・タブレットではデフォルトOFF
 
-          // BGMの初期化(全デバイスで読み込む)
-          this.bgm = {
-            title: new Audio('audio/title_bgm.mp3'),
-            normal: new Audio('audio/normal_bgm.mp3'),
-            miniboss: new Audio('audio/miniboss_bgm.mp3'),
-            finalboss: new Audio('audio/finalboss_bgm.mp3'),
-            clear: new Audio('audio/clear_bgm.mp3'),
-            gameover: new Audio('audio/gameover_bgm.mp3'),
-            current: null
-          };
-          
-          // BGMをループ設定
-          this.bgm.title.loop = true;
-          this.bgm.normal.loop = true;
-          this.bgm.miniboss.loop = true;
-          this.bgm.finalboss.loop = true;
-          this.bgm.clear.loop = true;
-          this.bgm.gameover.loop = true;
-          
-          // BGMの音量設定
-          this.bgm.title.volume = 0.5;
-          this.bgm.normal.volume = 0.5;
-          this.bgm.miniboss.volume = 0.6;
-          this.bgm.finalboss.volume = 0.7;
-          this.bgm.clear.volume = 0.6;
-          this.bgm.gameover.volume = 0.5;
+          // BGMの初期化(スマホは読み込まない、タブレット・PCは読み込む)
+          if (!this.isUltraLowSpec) {
+            this.bgm = {
+              title: new Audio('audio/title_bgm.mp3'),
+              normal: new Audio('audio/normal_bgm.mp3'),
+              miniboss: new Audio('audio/miniboss_bgm.mp3'),
+              finalboss: new Audio('audio/finalboss_bgm.mp3'),
+              clear: new Audio('audio/clear_bgm.mp3'),
+              gameover: new Audio('audio/gameover_bgm.mp3'),
+              current: null
+            };
+            
+            // BGMをループ設定
+            this.bgm.title.loop = true;
+            this.bgm.normal.loop = true;
+            this.bgm.miniboss.loop = true;
+            this.bgm.finalboss.loop = true;
+            this.bgm.clear.loop = true;
+            this.bgm.gameover.loop = true;
+            
+            // BGMの音量設定
+            this.bgm.title.volume = 0.5;
+            this.bgm.normal.volume = 0.5;
+            this.bgm.miniboss.volume = 0.6;
+            this.bgm.finalboss.volume = 0.7;
+            this.bgm.clear.volume = 0.6;
+            this.bgm.gameover.volume = 0.5;
+          } else {
+            // スマホはダミーオブジェクト
+            this.bgm = {
+              title: null,
+              normal: null,
+              miniboss: null,
+              finalboss: null,
+              clear: null,
+              gameover: null,
+              current: null
+            };
+          }
 
-          // 効果音の初期化(全デバイスで読み込む)
-          this.sfx = {
-            playerHit: new Audio('audio/player_damage.mp3'),
-            enemyHit: new Audio('audio/enemy_hit.mp3'),
-            enemyDeath: new Audio('audio/enemy_death.mp3'),
-            bossDeath: new Audio('audio/boss_death.mp3'),
-            gemGet: new Audio('audio/gem_get.mp3'),
-            itemGet: new Audio('audio/item_get.mp3')
-          };
-          
-          // 効果音の音量設定
-          this.sfx.playerHit.volume = 0.6;
-          this.sfx.enemyHit.volume = 0.15;
-          this.sfx.enemyDeath.volume = 0.5;
-          this.sfx.bossDeath.volume = 0.7;
-          this.sfx.gemGet.volume = 0.5;
-          this.sfx.itemGet.volume = 0.6;
+          // 効果音の初期化(スマホは読み込まない、タブレット・PCは読み込む)
+          if (!this.isUltraLowSpec) {
+            this.sfx = {
+              playerHit: new Audio('audio/player_damage.mp3'),
+              enemyHit: new Audio('audio/enemy_hit.mp3'),
+              enemyDeath: new Audio('audio/enemy_death.mp3'),
+              bossDeath: new Audio('audio/boss_death.mp3'),
+              gemGet: new Audio('audio/gem_get.mp3'),
+              itemGet: new Audio('audio/item_get.mp3')
+            };
+            
+            // 効果音の音量設定
+            this.sfx.playerHit.volume = 0.6;
+            this.sfx.enemyHit.volume = 0.15;
+            this.sfx.enemyDeath.volume = 0.5;
+            this.sfx.bossDeath.volume = 0.7;
+            this.sfx.gemGet.volume = 0.5;
+            this.sfx.itemGet.volume = 0.6;
+          } else {
+            // スマホはダミーオブジェクト
+            this.sfx = {
+              playerHit: null,
+              enemyHit: null,
+              enemyDeath: null,
+              bossDeath: null,
+              gemGet: null,
+              itemGet: null
+            };
+          }
 
           this.activeEffects = {
             speedBoost: 0,
@@ -2665,9 +2699,9 @@
           this.ctx.fillStyle = gradient;
           this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-          // 軽量版では星の数を削減
+          // 軽量版では星の数を削減（スマホは超削減）
           this.ctx.fillStyle = '#ffffff';
-          const starCount = this.isLowSpec ? 20 : 50;
+          const starCount = this.isUltraLowSpec ? 10 : (this.isLowSpec ? 20 : 50);
           for (let i = 0; i < starCount; i++) {
             const x = (i * 137.5) % this.canvas.width;
             const y = (i * 213.7) % this.canvas.height;
@@ -2723,8 +2757,11 @@
               // 通常オーブ
               if (this.isLowSpec) {
                 // 軽量版: シンプルな円
-                this.ctx.shadowColor = '#00ffff';
-                this.ctx.shadowBlur = 8;
+                // スマホはshadowBlurなし
+                if (!this.isUltraLowSpec) {
+                  this.ctx.shadowColor = '#00ffff';
+                  this.ctx.shadowBlur = 8;
+                }
                 
                 this.ctx.beginPath();
                 this.ctx.arc(orb.position.x, orb.position.y, orb.radius, 0, Math.PI * 2);
@@ -2792,8 +2829,11 @@
               
               if (this.isLowSpec) {
                 // 軽量版: シンプルな赤い円
-                this.ctx.shadowColor = '#ff0000';
-                this.ctx.shadowBlur = 10;
+                // スマホはshadowBlurなし
+                if (!this.isUltraLowSpec) {
+                  this.ctx.shadowColor = '#ff0000';
+                  this.ctx.shadowBlur = 10;
+                }
                 
                 this.ctx.beginPath();
                 this.ctx.arc(proj.position.x, proj.position.y, proj.radius, 0, Math.PI * 2);
@@ -2899,7 +2939,7 @@
             }
           });
 
-          drawPlayer(this.ctx, this.player, this.playerImage, performance.now(), this.isLowSpec);
+          drawPlayer(this.ctx, this.player, this.playerImage, performance.now(), this.isLowSpec, this.isUltraLowSpec);
 
           if (this.itemNotification) {
             const elapsed = performance.now() - this.itemNotificationTime;
