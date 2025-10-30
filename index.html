@@ -1603,19 +1603,26 @@
           this.bgmList = this.isUltraLowSpec ? [] : [
             { name: 'title', url: 'audio/title_bgm.mp3' },
             { name: 'normal', url: 'audio/normal_bgm.mp3' },
-            { name: 'miniboss', url: 'audio/miniboss_bgm.mp3' },
-            { name: 'finalboss', url: 'audio/finalboss_bgm.mp3' },
-            { name: 'clear', url: 'audio/clear_bgm.mp3' },
-            { name: 'gameover', url: 'audio/gameover_bgm.mp3' }
+            // タブレット以外のみ追加のBGMを読み込む
+            ...(this.isLowSpec ? [] : [
+              { name: 'miniboss', url: 'audio/miniboss_bgm.mp3' },
+              { name: 'finalboss', url: 'audio/finalboss_bgm.mp3' },
+              { name: 'clear', url: 'audio/clear_bgm.mp3' },
+              { name: 'gameover', url: 'audio/gameover_bgm.mp3' }
+            ])
           ];
           
+          // 効果音は最小限のみ先読み、残りは遅延読み込み
           this.sfxList = [
             { name: 'playerHit', url: 'audio/player_damage.mp3' },
-            { name: 'enemyHit', url: 'audio/enemy_hit.mp3' },
-            { name: 'enemyDeath', url: 'audio/enemy_death.mp3' },
-            { name: 'bossDeath', url: 'audio/boss_death.mp3' },
             { name: 'gemGet', url: 'audio/gem_get.mp3' },
-            { name: 'itemGet', url: 'audio/item_get.mp3' }
+            // タブレット以外のみ追加の効果音を読み込む
+            ...(this.isLowSpec ? [] : [
+              { name: 'enemyHit', url: 'audio/enemy_hit.mp3' },
+              { name: 'enemyDeath', url: 'audio/enemy_death.mp3' },
+              { name: 'bossDeath', url: 'audio/boss_death.mp3' },
+              { name: 'itemGet', url: 'audio/item_get.mp3' }
+            ])
           ];
 
 
