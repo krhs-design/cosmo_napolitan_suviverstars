@@ -1130,10 +1130,11 @@
           
           ctx.globalCompositeOperation = 'source-over';
           
+          ctx.imageSmoothingEnabled = true;
           // 画像のアスペクト比を保持
           const imgAspect = img.width / img.height;
-          let drawWidth = player.radius * 3;
-          let drawHeight = player.radius * 3;
+          let drawWidth = player.radius * 2.3;
+          let drawHeight = player.radius * 2.3;
           
           if (imgAspect > 1) {
             // 横長の画像
