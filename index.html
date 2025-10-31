@@ -25,7 +25,40 @@
       width: 100vw;
       height: 100vh;
     }
+    #ufo-image {
+        right: 0px;
+        width: 22vw;
+        max-width: 150px;
+        height: auto;
+        bottom: -4px;
+        position: absolute;
+        transition: transform 1.5s ease-out;
+      } 
+    .floating {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
+  }
 
+  /* 飛んでいくアニメーション */
+  .fly-away {
+    animation: flyUp 1.5s ease-in forwards;
+  }
+
+  @keyframes flyUp {
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-600px) scale(0.5);
+      opacity: 0;
+    }
+  }
     @media (max-width: 820px) and (min-width: 481px) and (orientation: portrait) {
       #app {
         align-items: flex-start;
@@ -60,6 +93,9 @@
         border-left: none;
         border-right: none;
       }
+      #ufo-image {
+        max-width: 100px;
+      } 
     }
 
     @media (max-height: 620px) {
@@ -118,7 +154,6 @@
       }
 
       .modal {
-        align-items: flex-start !important;
         padding-top: 30px !important;
       }
 
@@ -806,6 +841,9 @@
             </div>
             <button id="start-btn" class="btn btn-large" style="display: none;">ゲームスタート 🚀</button>
           </div>
+          <div id="ufo-container">
+            <img id="ufo-image" class="floating" src="images/cosmo-napolitan.png" alt="コスモなぽりたん">
+          </div>
         </div>
 
         <div id="levelup-modal" class="modal hidden">
@@ -1088,8 +1126,8 @@
           
           // 画像のアスペクト比を保持
           const imgAspect = img.width / img.height;
-          let drawWidth = player.radius * 2;
-          let drawHeight = player.radius * 2;
+          let drawWidth = player.radius * 3;
+          let drawHeight = player.radius * 3;
           
           if (imgAspect > 1) {
             // 横長の画像
@@ -2011,6 +2049,31 @@
                 }
               });
             }
+  
+  const startBtn = document.getElementById("start-btn");
+  const ufo = document.getElementById("ufo-image");
+
+  startBtn.addEventListener("click", () => {
+    // ボタンをすぐに消す
+    startBtn.style.display = "none";
+
+    // フワフワを止めて飛行アニメーション開始
+    ufo.classList.remove("floating");
+    ufo.classList.add("fly-away");
+
+    // アニメーション終了後に画面切り替え
+    ufo.addEventListener("animationend", () => {
+      // ここでページ遷移などを行う
+      window.location.href = "game.html"; // ← 次のページへ
+    }, { once: true }); // 一度だけ実行
+  });
+  
+  // 1.5秒後にゲーム開始
+  setTimeout(() => {
+    this.stopBGM(); // タイトルBGMを停止
+    this.startModal.classList.add('hidden');
+    this.start();
+  }, 1500);
             
             this.stopBGM(); // タイトルBGMを停止
             this.startModal.classList.add('hidden');
