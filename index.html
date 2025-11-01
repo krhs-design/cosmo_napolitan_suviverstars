@@ -40,6 +40,8 @@
     .results {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      align-items: center;
+      justify-items: center;
     }
     
   @keyframes float {
@@ -165,6 +167,7 @@
         max-height: 90vh !important;
         overflow-y: auto !important;
         margin-top: 0 !important;
+        margin-bottom: 30px;
         padding: 20px !important;
       }
 
@@ -173,7 +176,7 @@
       }
 
       .modal-content p {
-        font-size: 14px !important;
+        font-size: 14px;
       }
 
       .upgrade-card {
@@ -630,7 +633,6 @@
 
     .modal-content h1 {
       font-size: 36px;
-      margin-bottom: 10px;
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
     }
 
@@ -842,11 +844,11 @@
             <div id="music-selection" style="margin-bottom: 20px;">
               <button id="music-on-btn" class="btn" style="margin-right: 10px;">🔊 音楽あり</button>
               <button id="music-off-btn" class="btn">🔇 音楽なし</button>
-              <p class="music-select" style="font-size:9px; margin-top: 4px;">※音楽はタブレットかPCで聴けるよ</p>
+              <p class="music-select" style="font-size:12px; margin-top: 4px; margin-bottom: 0;">※音楽はタブレットかPCで聴けるよ</p>
+                <p class="credit" style="font-size:8px; opacity: 0.5;">Music by Suno AI</p>
             </div>
             <button id="start-btn" class="btn btn-large" style="display: none;">ゲームスタート 🚀</button>
-          <p class="credit" style="font-size:8px; opacity: 0.5;">Music by Suno AI</p>
-          </div>
+            </div>
           <div id="ufo-container">
             <img id="ufo-image" class="floating" src="images/cosmo-napolitan.png" alt="コスモなぽりたん">
           </div>
@@ -903,11 +905,11 @@
         <div id="gameclear-modal" class="modal hidden">
           <div class="modal-content" style="max-width: 600px;">
             <h2 style="color: #ffd700; font-size: 2.5em; text-shadow: 0 0 20px #ffd700;">🎉 ゲームクリア！ 🎉</h2>
-            <p style="font-size: 1.3em; margin: 20px 0;">最終ボスを撃破！おめでとうございます！</p>
+            <p style="font-size: 1.3em; margin: １0px 0;">最終ボスを撃破！おめでとうございます！</p>
             <div class="results">
-              <div id="clear-stats" style="margin: 20px 0; font-size: 18px; line-height: 1.8;"></div>
-              <div style="margin: 30px 0;">
-                <img src="images/kancho.png" alt="コスモホール館長" style="max-width: 35%; height: auto; border-radius: 10px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
+              <div id="clear-stats" style="margin: 20px 0; font-size: 18px; line-height: 1.8; text-align: left;"></div>
+              <div style="margin: 20px 0; max-width: 50%;">
+                <img src="images/kancho.png" alt="コスモホール館長" style="width: 100%; height: auto; border-radius: 10px; box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
             </div>
             </div>
             <button id="restart-clear-btn" class="btn btn-large" style="background: linear-gradient(135deg, #ffd700, #ffed4e); color: #000; font-weight: bold;">もう一度プレイ</button>
