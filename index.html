@@ -2061,34 +2061,21 @@
               });
             }
   
-  const startBtn = document.getElementById("start-btn");
-  const ufo = document.getElementById("ufo-image");
+            const ufo = document.getElementById("ufo-image");
 
-  startBtn.addEventListener("click", () => {
-    // ボタンをすぐに消す
-    startBtn.style.display = "none";
+            // ボタンをすぐに消す
+            startBtn.style.display = "none";
 
-    // フワフワを止めて飛行アニメーション開始
-    ufo.classList.remove("floating");
-    ufo.classList.add("fly-away");
+            // フワフワを止めて飛行アニメーション開始
+            ufo.classList.remove("floating");
+            ufo.classList.add("fly-away");
 
-    // アニメーション終了後に画面切り替え
-    ufo.addEventListener("animationend", () => {
-      // ここでページ遷移などを行う
-      window.location.href = "game.html"; // ← 次のページへ
-    }, { once: true }); // 一度だけ実行
-  });
-  
-  // 1.5秒後にゲーム開始
-  setTimeout(() => {
-    this.stopBGM(); // タイトルBGMを停止
-    this.startModal.classList.add('hidden');
-    this.start();
-  }, 1500);
-            
-            this.stopBGM(); // タイトルBGMを停止
-            this.startModal.classList.add('hidden');
-            this.start();
+            // 1.5秒後にゲーム開始
+            setTimeout(() => {
+              this.stopBGM(); // タイトルBGMを停止
+              this.startModal.classList.add('hidden');
+              this.start();
+            }, 1500);
           });
 
           document.getElementById('restart-btn').addEventListener('click', () => {
@@ -2298,11 +2285,9 @@
         }
 
         quitGame() {
+          // ゲームを終了してスタート画面に戻る
           this.isGameOver = true;
           this.stopBGM();
-          this.pauseModal.classList.add('hidden');
-          
-          // タイトル画面に戻る
           window.location.reload();
         }
 
@@ -2957,8 +2942,15 @@
           this.playSFX('playerHit');
           this.updateUI();
 
+          // HPが0以下になったら確実にゲームオーバー
           if (this.player.hp <= 0) {
-            this.gameOver();
+            console.log('💀 Player HP is 0, triggering game over...');
+            // すぐにゲームオーバーフラグを立てる
+            this.isGameOver = true;
+            // 少し遅延させて確実に実行
+            setTimeout(() => {
+              this.gameOver();
+            }, 100);
           }
         }
 
@@ -3247,6 +3239,13 @@
         }
 
         gameOver() {
+          // すでにゲームオーバー処理中なら何もしない（二重実行防止）
+          if (this.gameoverModal && !this.gameoverModal.classList.contains('hidden')) {
+            console.log('⚠️ Game over modal already shown, skipping...');
+            return;
+          }
+          
+          console.log('🎮 Executing game over...');
           this.isGameOver = true;
           this.stats.timeAlive = this.gameTime;
           this.stats.level = this.player.level;
@@ -3264,6 +3263,7 @@
           
           document.getElementById('final-stats').innerHTML = statsText;
           this.gameoverModal.classList.remove('hidden');
+          console.log('✅ Game over modal displayed');
         }
 
         gameClear() {
