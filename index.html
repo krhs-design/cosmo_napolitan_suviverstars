@@ -310,7 +310,7 @@
       background: rgba(0, 0, 0, 0.7);
       padding: 15px;
       border-radius: 8px;
-      display: flex;
+      display: none; /* 最初は非表示 */
       flex-direction: column;
       gap: 8px;
       min-width: 200px;
@@ -423,7 +423,7 @@
       border: 3px solid #4a90e2;
       border-radius: 8px;
       cursor: pointer;
-      display: flex;
+      display: none; /* 最初は非表示 */
       align-items: center;
       justify-content: center;
       pointer-events: auto;
@@ -793,23 +793,22 @@
       transform: scale(1.05);
     }
   /* 仮想ジョイスティック（スマホのみ） */
-#virtual-joystick {
-  display: none;
+  #virtual-joystick {
+    display: none; /* 最初は非表示 */
     position: absolute;
-    bottom: -22vh;
-    right: 50%;
-    transform: translateX(50%);
+    bottom: 20px;
+    right: 20px;
     width: 120px;
     height: 120px;
-    z-index: 1;
+    z-index: 1000;
     pointer-events: auto;
-}
-
-@media (max-width: 600px) {
-  #virtual-joystick {
-    display: block;
   }
-}
+
+  @media (max-width: 600px) {
+    #virtual-joystick.game-started {
+      display: block; /* ゲーム開始後のみ表示 */
+    }
+  }
 
 .joystick-base {
   width: 100%;
@@ -1833,14 +1832,14 @@
           this.isGameOver = false;
           this.lastTime = 0;
           this.gameTime = 0;
-          this.joystickInput = { x: 0, y: 0 }; // ジョイスティック入力
-          this.setupJoystick();
-
+          
           // デバイス判定(スマホは超軽量版、タブレットは軽量版)
           this.isMobile = window.innerWidth <= 600;
           this.isTablet = window.innerWidth > 600 && window.innerWidth <= 820;
           this.isUltraLowSpec = this.isMobile; // スマホ専用超軽量モード
           this.isLowSpec = this.isMobile || this.isTablet; // 従来の軽量モード
+          
+          this.joystickInput = { x: 0, y: 0 }; // ジョイスティック入力
 
           this.playerImage = new Image();
           this.playerImage.src = 'images/cosmo-napolitan.png';
@@ -1952,6 +1951,7 @@
 
           this.setupUI();
           this.setupEventListeners();
+          this.setupJoystick(); // デバイス判定後に呼ぶ
         }
 
         setupUI() {
@@ -1970,12 +1970,27 @@
           this.gameclearModal = document.getElementById('gameclear-modal');
           this.upgradeOptions = document.getElementById('upgrade-options');
           
-          // スマホの場合、音楽選択ボタンを非活性にしてスタートボタンのみ表示
+          // スマホの場合、音楽なしで自動的にスタート可能にする
           if (this.isUltraLowSpec) {
+            // デバッグ情報を画面に表示
+            const debugInfo = document.createElement('div');
+            debugInfo.style.position = 'fixed';
+            debugInfo.style.top = '10px';
+            debugInfo.style.left = '10px';
+            debugInfo.style.background = 'rgba(0,0,0,0.8)';
+            debugInfo.style.color = 'lime';
+            debugInfo.style.padding = '10px';
+            debugInfo.style.zIndex = '9999';
+            debugInfo.style.fontSize = '12px';
+            debugInfo.innerHTML = '📱 スマホモード検出！<br>画面幅: ' + window.innerWidth;
+            document.body.appendChild(debugInfo);
+            
             const musicSelection = document.getElementById('music-selection');
             const musicOnBtn = document.getElementById('music-on-btn');
             const musicOffBtn = document.getElementById('music-off-btn');
             const startBtn = document.getElementById('start-btn');
+            
+            debugInfo.innerHTML += '<br>スタートボタン: ' + (startBtn ? 'あり' : 'なし');
             
             // 音楽選択ボタンを非活性化（非表示にせず、グレーアウト）
             if (musicOnBtn) {
@@ -1989,8 +2004,20 @@
               musicOffBtn.style.cursor = 'not-allowed';
             }
             
-            // スタートボタンを表示
-            if (startBtn) startBtn.style.display = 'inline-block';
+            // スタートボタンを表示して、AudioManagerを初期化
+            if (startBtn) {
+              startBtn.style.display = 'inline-block';
+              debugInfo.innerHTML += '<br>✅ スタートボタン表示完了!';
+              
+              // スマホは音楽なしなので、効果音のみ初期化
+              (async () => {
+                await this.audioManager.init();
+                await this.audioManager.preloadAll([], this.sfxList);
+                debugInfo.innerHTML += '<br>✅ 音声初期化完了!';
+              })();
+            } else {
+              debugInfo.innerHTML += '<br>❌ スタートボタンが見つかりません!';
+            }
             
             // BGM・効果音トグルを非活性化
             const bgmToggle = document.getElementById('bgm-toggle');
@@ -2008,6 +2035,36 @@
             soundSettings.forEach(setting => {
               setting.classList.add('disabled');
             });
+          } else {
+            // PC/タブレット用のデバッグ情報
+            const debugInfo = document.createElement('div');
+            debugInfo.id = 'pc-debug-info';
+            debugInfo.style.position = 'fixed';
+            debugInfo.style.top = '10px';
+            debugInfo.style.left = '10px';
+            debugInfo.style.background = 'rgba(0,0,0,0.8)';
+            debugInfo.style.color = 'cyan';
+            debugInfo.style.padding = '10px';
+            debugInfo.style.zIndex = '9999';
+            debugInfo.style.fontSize = '12px';
+            debugInfo.innerHTML = '💻 PC/タブレットモード<br>画面幅: ' + window.innerWidth;
+            document.body.appendChild(debugInfo);
+            
+            // 音楽選択ボタンのクリックイベントを監視
+            const musicOnBtn = document.getElementById('music-on-btn');
+            const musicOffBtn = document.getElementById('music-off-btn');
+            
+            if (musicOnBtn) {
+              musicOnBtn.addEventListener('click', () => {
+                debugInfo.innerHTML += '<br>🔊 音楽ありボタンクリック';
+              });
+            }
+            
+            if (musicOffBtn) {
+              musicOffBtn.addEventListener('click', () => {
+                debugInfo.innerHTML += '<br>🔇 音楽なしボタンクリック';
+              });
+            }
           }
           this.buffsContainer = document.getElementById('buffs');
 
@@ -2265,6 +2322,16 @@
         start() {
           this.isRunning = true;
           this.lastTime = performance.now();
+          
+          // HUDとポーズボタンとジョイスティックを表示
+          const hud = document.getElementById('hud');
+          const pauseBtn = document.getElementById('pause-btn');
+          const joystick = document.getElementById('virtual-joystick');
+          
+          if (hud) hud.style.display = 'flex';
+          if (pauseBtn) pauseBtn.style.display = 'flex';
+          if (joystick && this.isMobile) joystick.classList.add('game-started');
+          
           this.gameLoop(this.lastTime);
           
           // 通常戦闘BGMを再生
