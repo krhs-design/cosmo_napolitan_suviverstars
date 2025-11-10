@@ -792,6 +792,53 @@
       box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
       transform: scale(1.05);
     }
+  /* 仮想ジョイスティック（スマホのみ） */
+#virtual-joystick {
+  display: none;
+    position: absolute;
+    bottom: -22vh;
+    right: 50%;
+    transform: translateX(50%);
+    width: 120px;
+    height: 120px;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+@media (max-width: 600px) {
+  #virtual-joystick {
+    display: block;
+  }
+}
+
+.joystick-base {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(74, 144, 226, 0.3) 0%, rgba(74, 144, 226, 0.1) 100%);
+  border: 3px solid rgba(74, 144, 226, 0.5);
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.joystick-stick {
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle, #4a90e2 0%, #357abd 100%);
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s ease-out;
+}
+
+.joystick-active .joystick-stick {
+  background: radial-gradient(circle, #5fa3f5 0%, #4a90e2 100%);
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.8);
+}
   </style>
 </head>
 <body>
@@ -826,7 +873,12 @@
         </div>
 
         <div id="buffs"></div>
-
+<!-- 仮想ジョイスティック（スマホのみ表示） -->
+<div id="virtual-joystick">
+  <div class="joystick-base">
+    <div class="joystick-stick"></div>
+  </div>
+</div>
         <button id="pause-btn" aria-label="ポーズ">
           <div class="pause-icon"></div>
         </button>
@@ -1781,7 +1833,9 @@
           this.isGameOver = false;
           this.lastTime = 0;
           this.gameTime = 0;
-          
+          this.joystickInput = { x: 0, y: 0 }; // ジョイスティック入力
+          this.setupJoystick();
+
           // デバイス判定(スマホは超軽量版、タブレットは軽量版)
           this.isMobile = window.innerWidth <= 600;
           this.isTablet = window.innerWidth > 600 && window.innerWidth <= 820;
@@ -2328,58 +2382,44 @@
         }
 
         updatePlayer(deltaTime) {
-          let dx = 0;
-          let dy = 0;
+  let dx = 0;
+  let dy = 0;
 
-          // キーボード入力
-          let keyboardInput = false;
-          if (this.keys['w'] || this.keys['arrowup']) { dy -= 1; keyboardInput = true; }
-          if (this.keys['s'] || this.keys['arrowdown']) { dy += 1; keyboardInput = true; }
-          if (this.keys['a'] || this.keys['arrowleft']) { dx -= 1; keyboardInput = true; }
-          if (this.keys['d'] || this.keys['arrowright']) { dx += 1; keyboardInput = true; }
+  // ジョイスティック入力（優先）
+  if (this.joystickInput.x !== 0 || this.joystickInput.y !== 0) {
+    dx = this.joystickInput.x;
+    dy = this.joystickInput.y;
+    this.mouseTarget = null; // ジョイスティック使用中はマウスターゲットをクリア
+  }
+  // キーボード入力
+  else {
+    let keyboardInput = false;
+    if (this.keys['w'] || this.keys['arrowup']) { dy -= 1; keyboardInput = true; }
+    if (this.keys['s'] || this.keys['arrowdown']) { dy += 1; keyboardInput = true; }
+    if (this.keys['a'] || this.keys['arrowleft']) { dx -= 1; keyboardInput = true; }
+    if (this.keys['d'] || this.keys['arrowright']) { dx += 1; keyboardInput = true; }
 
-          // キーボード入力があったらマウスターゲットをクリア
-          if (keyboardInput) {
-            this.mouseTarget = null;
-          }
+    // キーボード入力があったらマウスターゲットをクリア
+    if (keyboardInput) {
+      this.mouseTarget = null;
+    }
 
-          // マウスターゲットがある場合
-          if (!keyboardInput && this.mouseTarget) {
-            const targetDx = this.mouseTarget.x - this.player.position.x;
-            const targetDy = this.mouseTarget.y - this.player.position.y;
-            const distance = Math.sqrt(targetDx * targetDx + targetDy * targetDy);
+    // マウスターゲットがある場合
+    if (!keyboardInput && this.mouseTarget) {
+      const targetDx = this.mouseTarget.x - this.player.position.x;
+      const targetDy = this.mouseTarget.y - this.player.position.y;
+      const distance = Math.sqrt(targetDx * targetDx + targetDy * targetDy);
 
-            // 目標地点に十分近づいたら停止
-            if (distance < 5) {
-              this.mouseTarget = null;
-            } else {
-              dx = targetDx / distance;
-              dy = targetDy / distance;
-            }
-          }
-
-          if (dx !== 0 || dy !== 0) {
-            const length = Math.sqrt(dx * dx + dy * dy);
-            dx /= length;
-            dy /= length;
-
-            let speedMultiplier = this.activeEffects.speedBoost > performance.now() ? 1.5 : 1.0;
-            
-            // デバフ敵の範囲内にいる場合は速度を下げる
-            if (this.debuffedByEnemy) {
-              speedMultiplier *= 0.5;
-            }
-            
-            const speed = this.player.speed * speedMultiplier;
-
-            this.player.position.x += dx * speed * deltaTime;
-            this.player.position.y += dy * speed * deltaTime;
-
-            this.player.position.x = Math.max(this.player.radius, Math.min(this.canvas.width - this.player.radius, this.player.position.x));
-            this.player.position.y = Math.max(this.player.radius, Math.min(this.canvas.height - this.player.radius, this.player.position.y));
-          }
-        }
-
+      // 目標地点に十分近づいたら停止
+      if (distance < 5) {
+        this.mouseTarget = null;
+      } else {
+        dx = targetDx / distance;
+        dy = targetDy / distance;
+      }
+    }
+  }
+  
         updateEnemies(deltaTime, currentTime) {
           this.enemies.forEach(enemy => {
             if (!enemy.isAlive) return;
@@ -3571,6 +3611,78 @@
       console.log('🌟 コスモなぽりたん サバイバースターズ 🍝');
       console.log('WASDまたは方向キーで移動してね！');
     })();
+    setupJoystick() {
+  if (!this.isMobile) return; // スマホのみ
+  
+  const joystick = document.getElementById('virtual-joystick');
+  const base = joystick.querySelector('.joystick-base');
+  const stick = joystick.querySelector('.joystick-stick');
+  
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+  const maxDistance = 35; // ジョイスティックの最大移動距離
+  
+  const handleStart = (e) => {
+    if (this.isPaused || this.isGameOver) return;
+    
+    isDragging = true;
+    base.classList.add('joystick-active');
+    
+    const touch = e.touches ? e.touches[0] : e;
+    const rect = base.getBoundingClientRect();
+    startX = rect.left + rect.width / 2;
+    startY = rect.top + rect.height / 2;
+  };
+  
+  const handleMove = (e) => {
+    if (!isDragging) return;
+    
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    
+    let dx = touch.clientX - startX;
+    let dy = touch.clientY - startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    // 最大距離を超えないように制限
+    if (distance > maxDistance) {
+      dx = (dx / distance) * maxDistance;
+      dy = (dy / distance) * maxDistance;
+    }
+    
+    // スティックの位置を更新
+    stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    
+    // 正規化された入力値を計算（-1 ~ 1）
+    this.joystickInput.x = dx / maxDistance;
+    this.joystickInput.y = dy / maxDistance;
+  };
+  
+  const handleEnd = () => {
+    isDragging = false;
+    base.classList.remove('joystick-active');
+    
+    // スティックを中央に戻す
+    stick.style.transform = 'translate(-50%, -50%)';
+    
+    // 入力をリセット
+    this.joystickInput.x = 0;
+    this.joystickInput.y = 0;
+  };
+  
+  // タッチイベント
+  joystick.addEventListener('touchstart', handleStart);
+  joystick.addEventListener('touchmove', handleMove);
+  joystick.addEventListener('touchend', handleEnd);
+  joystick.addEventListener('touchcancel', handleEnd);
+  
+  // マウスイベント（デバッグ用）
+  joystick.addEventListener('mousedown', handleStart);
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleEnd);
+}
+
   </script>
 </body>
 </html>
