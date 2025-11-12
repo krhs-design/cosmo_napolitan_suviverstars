@@ -1972,25 +1972,9 @@
           
           // スマホの場合、音楽なしで自動的にスタート可能にする
           if (this.isUltraLowSpec) {
-            // デバッグ情報を画面に表示
-            const debugInfo = document.createElement('div');
-            debugInfo.style.position = 'fixed';
-            debugInfo.style.top = '10px';
-            debugInfo.style.left = '10px';
-            debugInfo.style.background = 'rgba(0,0,0,0.8)';
-            debugInfo.style.color = 'lime';
-            debugInfo.style.padding = '10px';
-            debugInfo.style.zIndex = '9999';
-            debugInfo.style.fontSize = '12px';
-            debugInfo.innerHTML = '📱 スマホモード検出！<br>画面幅: ' + window.innerWidth;
-            document.body.appendChild(debugInfo);
-            
-            const musicSelection = document.getElementById('music-selection');
             const musicOnBtn = document.getElementById('music-on-btn');
             const musicOffBtn = document.getElementById('music-off-btn');
             const startBtn = document.getElementById('start-btn');
-            
-            debugInfo.innerHTML += '<br>スタートボタン: ' + (startBtn ? 'あり' : 'なし');
             
             // 音楽選択ボタンを非活性化（非表示にせず、グレーアウト）
             if (musicOnBtn) {
@@ -2007,16 +1991,12 @@
             // スタートボタンを表示して、AudioManagerを初期化
             if (startBtn) {
               startBtn.style.display = 'inline-block';
-              debugInfo.innerHTML += '<br>✅ スタートボタン表示完了!';
               
               // スマホは音楽なしなので、効果音のみ初期化
               (async () => {
                 await this.audioManager.init();
                 await this.audioManager.preloadAll([], this.sfxList);
-                debugInfo.innerHTML += '<br>✅ 音声初期化完了!';
               })();
-            } else {
-              debugInfo.innerHTML += '<br>❌ スタートボタンが見つかりません!';
             }
             
             // BGM・効果音トグルを非活性化
@@ -2035,23 +2015,6 @@
             soundSettings.forEach(setting => {
               setting.classList.add('disabled');
             });
-          } else {
-            // PC/タブレット用のデバッグ情報
-            const debugInfo = document.createElement('div');
-            debugInfo.id = 'pc-debug-info';
-            debugInfo.style.position = 'fixed';
-            debugInfo.style.top = '10px';
-            debugInfo.style.left = '10px';
-            debugInfo.style.background = 'rgba(0,0,0,0.8)';
-            debugInfo.style.color = 'cyan';
-            debugInfo.style.padding = '10px';
-            debugInfo.style.zIndex = '9999';
-            debugInfo.style.fontSize = '12px';
-            debugInfo.innerHTML = '💻 PC/タブレットモード<br>画面幅: ' + window.innerWidth;
-            document.body.appendChild(debugInfo);
-            
-            // デバッグ情報を後で更新できるように保存
-            this.pcDebugInfo = debugInfo;
           }
           this.buffsContainer = document.getElementById('buffs');
 
@@ -2065,11 +2028,6 @@
 
           // 音楽ありボタン
           musicOnBtn.addEventListener('click', async () => {
-            // デバッグ出力
-            if (this.pcDebugInfo) {
-              this.pcDebugInfo.innerHTML += '<br>🔊 音楽ありボタンクリック';
-            }
-            
             this.bgmEnabled = true;
             this.sfxEnabled = true; // 効果音もONに
             document.getElementById('bgm-toggle').classList.add('active');
@@ -2083,26 +2041,12 @@
             musicOnBtn.disabled = true;
             musicOnBtn.textContent = '🔊 読み込み中...';
             
-            if (this.pcDebugInfo) {
-              this.pcDebugInfo.innerHTML += '<br>📥 音楽読み込み開始...';
-            }
-            
             try {
               // AudioManagerを初期化してプリロード
-              console.log('🎵 Initializing AudioManager...');
               await this.audioManager.init();
-              console.log('✅ AudioManager initialized');
-              
-              console.log('📥 Preloading audio files...');
               await this.audioManager.preloadAll(this.bgmList, this.sfxList);
-              console.log('✅ All audio files loaded');
-              
-              if (this.pcDebugInfo) {
-                this.pcDebugInfo.innerHTML += '<br>✅ 音楽読み込み完了';
-              }
               
               // タイトルBGMを再生
-              console.log('▶️ Playing title BGM...');
               this.playBGM('title');
               
               // ボタンを元に戻す
@@ -2111,17 +2055,8 @@
               
               // スタートボタンを表示
               startBtn.style.display = 'inline-block';
-              
-              if (this.pcDebugInfo) {
-                this.pcDebugInfo.innerHTML += '<br>✅ スタートボタン表示!';
-              }
             } catch (error) {
               console.error('❌ Audio initialization failed:', error);
-              
-              if (this.pcDebugInfo) {
-                this.pcDebugInfo.innerHTML += '<br>❌ エラー: ' + error.message;
-              }
-              
               alert('音楽の読み込みに失敗しました。音楽なしで続行します。\nエラー: ' + error.message);
               
               // エラー時の処理
@@ -2134,11 +2069,6 @@
 
           // 音楽なしボタン
           musicOffBtn.addEventListener('click', async () => {
-            // デバッグ出力
-            if (this.pcDebugInfo) {
-              this.pcDebugInfo.innerHTML += '<br>🔇 音楽なしボタンクリック';
-            }
-            
             this.bgmEnabled = false;
             this.sfxEnabled = false; // 効果音もOFFに
             document.getElementById('bgm-toggle').classList.remove('active');
@@ -2153,16 +2083,8 @@
               musicOffBtn.disabled = true;
               musicOffBtn.textContent = '🔇 読み込み中...';
               
-              if (this.pcDebugInfo) {
-                this.pcDebugInfo.innerHTML += '<br>📥 効果音読み込み開始...';
-              }
-              
               await this.audioManager.init();
               await this.audioManager.preloadAll([], this.sfxList); // 効果音のみロード
-              
-              if (this.pcDebugInfo) {
-                this.pcDebugInfo.innerHTML += '<br>✅ 効果音読み込み完了';
-              }
               
               musicOffBtn.disabled = false;
               musicOffBtn.textContent = '🔇 音楽なし';
@@ -2173,10 +2095,6 @@
             
             // スタートボタンを表示
             startBtn.style.display = 'inline-block';
-            
-            if (this.pcDebugInfo) {
-              this.pcDebugInfo.innerHTML += '<br>✅ スタートボタン表示!';
-            }
           });
 
           // スタートボタン
