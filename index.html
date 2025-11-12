@@ -2050,21 +2050,8 @@
             debugInfo.innerHTML = '💻 PC/タブレットモード<br>画面幅: ' + window.innerWidth;
             document.body.appendChild(debugInfo);
             
-            // 音楽選択ボタンのクリックイベントを監視
-            const musicOnBtn = document.getElementById('music-on-btn');
-            const musicOffBtn = document.getElementById('music-off-btn');
-            
-            if (musicOnBtn) {
-              musicOnBtn.addEventListener('click', () => {
-                debugInfo.innerHTML += '<br>🔊 音楽ありボタンクリック';
-              });
-            }
-            
-            if (musicOffBtn) {
-              musicOffBtn.addEventListener('click', () => {
-                debugInfo.innerHTML += '<br>🔇 音楽なしボタンクリック';
-              });
-            }
+            // デバッグ情報を後で更新できるように保存
+            this.pcDebugInfo = debugInfo;
           }
           this.buffsContainer = document.getElementById('buffs');
 
@@ -2078,6 +2065,11 @@
 
           // 音楽ありボタン
           musicOnBtn.addEventListener('click', async () => {
+            // デバッグ出力
+            if (this.pcDebugInfo) {
+              this.pcDebugInfo.innerHTML += '<br>🔊 音楽ありボタンクリック';
+            }
+            
             this.bgmEnabled = true;
             this.sfxEnabled = true; // 効果音もONに
             document.getElementById('bgm-toggle').classList.add('active');
@@ -2091,6 +2083,10 @@
             musicOnBtn.disabled = true;
             musicOnBtn.textContent = '🔊 読み込み中...';
             
+            if (this.pcDebugInfo) {
+              this.pcDebugInfo.innerHTML += '<br>📥 音楽読み込み開始...';
+            }
+            
             try {
               // AudioManagerを初期化してプリロード
               console.log('🎵 Initializing AudioManager...');
@@ -2100,6 +2096,10 @@
               console.log('📥 Preloading audio files...');
               await this.audioManager.preloadAll(this.bgmList, this.sfxList);
               console.log('✅ All audio files loaded');
+              
+              if (this.pcDebugInfo) {
+                this.pcDebugInfo.innerHTML += '<br>✅ 音楽読み込み完了';
+              }
               
               // タイトルBGMを再生
               console.log('▶️ Playing title BGM...');
@@ -2111,8 +2111,17 @@
               
               // スタートボタンを表示
               startBtn.style.display = 'inline-block';
+              
+              if (this.pcDebugInfo) {
+                this.pcDebugInfo.innerHTML += '<br>✅ スタートボタン表示!';
+              }
             } catch (error) {
               console.error('❌ Audio initialization failed:', error);
+              
+              if (this.pcDebugInfo) {
+                this.pcDebugInfo.innerHTML += '<br>❌ エラー: ' + error.message;
+              }
+              
               alert('音楽の読み込みに失敗しました。音楽なしで続行します。\nエラー: ' + error.message);
               
               // エラー時の処理
@@ -2125,6 +2134,11 @@
 
           // 音楽なしボタン
           musicOffBtn.addEventListener('click', async () => {
+            // デバッグ出力
+            if (this.pcDebugInfo) {
+              this.pcDebugInfo.innerHTML += '<br>🔇 音楽なしボタンクリック';
+            }
+            
             this.bgmEnabled = false;
             this.sfxEnabled = false; // 効果音もOFFに
             document.getElementById('bgm-toggle').classList.remove('active');
@@ -2139,8 +2153,16 @@
               musicOffBtn.disabled = true;
               musicOffBtn.textContent = '🔇 読み込み中...';
               
+              if (this.pcDebugInfo) {
+                this.pcDebugInfo.innerHTML += '<br>📥 効果音読み込み開始...';
+              }
+              
               await this.audioManager.init();
               await this.audioManager.preloadAll([], this.sfxList); // 効果音のみロード
+              
+              if (this.pcDebugInfo) {
+                this.pcDebugInfo.innerHTML += '<br>✅ 効果音読み込み完了';
+              }
               
               musicOffBtn.disabled = false;
               musicOffBtn.textContent = '🔇 音楽なし';
@@ -2151,6 +2173,10 @@
             
             // スタートボタンを表示
             startBtn.style.display = 'inline-block';
+            
+            if (this.pcDebugInfo) {
+              this.pcDebugInfo.innerHTML += '<br>✅ スタートボタン表示!';
+            }
           });
 
           // スタートボタン
@@ -2412,6 +2438,78 @@
           window.location.reload();
         }
 
+        setupJoystick() {
+          if (!this.isMobile) return; // スマホのみ
+          
+          const joystick = document.getElementById('virtual-joystick');
+          const base = joystick.querySelector('.joystick-base');
+          const stick = joystick.querySelector('.joystick-stick');
+          
+          let isDragging = false;
+          let startX = 0;
+          let startY = 0;
+          const maxDistance = 35; // ジョイスティックの最大移動距離
+          
+          const handleStart = (e) => {
+            if (this.isPaused || this.isGameOver) return;
+            
+            isDragging = true;
+            base.classList.add('joystick-active');
+            
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = base.getBoundingClientRect();
+            startX = rect.left + rect.width / 2;
+            startY = rect.top + rect.height / 2;
+          };
+          
+          const handleMove = (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            
+            let dx = touch.clientX - startX;
+            let dy = touch.clientY - startY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // 最大距離を超えないように制限
+            if (distance > maxDistance) {
+              dx = (dx / distance) * maxDistance;
+              dy = (dy / distance) * maxDistance;
+            }
+            
+            // スティックの位置を更新
+            stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            
+            // 正規化された入力値を計算（-1 ~ 1）
+            this.joystickInput.x = dx / maxDistance;
+            this.joystickInput.y = dy / maxDistance;
+          };
+          
+          const handleEnd = () => {
+            isDragging = false;
+            base.classList.remove('joystick-active');
+            
+            // スティックを中央に戻す
+            stick.style.transform = 'translate(-50%, -50%)';
+            
+            // 入力をリセット
+            this.joystickInput.x = 0;
+            this.joystickInput.y = 0;
+          };
+          
+          // タッチイベント
+          joystick.addEventListener('touchstart', handleStart);
+          joystick.addEventListener('touchmove', handleMove);
+          joystick.addEventListener('touchend', handleEnd);
+          joystick.addEventListener('touchcancel', handleEnd);
+          
+          // マウスイベント（デバッグ用）
+          joystick.addEventListener('mousedown', handleStart);
+          document.addEventListener('mousemove', handleMove);
+          document.addEventListener('mouseup', handleEnd);
+        }
+
         gameLoop(currentTime) {
           if (!this.isRunning || this.isPaused) return;
 
@@ -2487,6 +2585,29 @@
     }
   }
   
+  // 移動処理
+  if (dx !== 0 || dy !== 0) {
+    const length = Math.sqrt(dx * dx + dy * dy);
+    dx /= length;
+    dy /= length;
+
+    let speedMultiplier = this.activeEffects.speedBoost > performance.now() ? 1.5 : 1.0;
+    
+    // デバフ敵の範囲内にいる場合は速度を下げる
+    if (this.debuffedByEnemy) {
+      speedMultiplier *= 0.5;
+    }
+    
+    const speed = this.player.speed * speedMultiplier;
+
+    this.player.position.x += dx * speed * deltaTime;
+    this.player.position.y += dy * speed * deltaTime;
+
+    this.player.position.x = Math.max(this.player.radius, Math.min(this.canvas.width - this.player.radius, this.player.position.x));
+    this.player.position.y = Math.max(this.player.radius, Math.min(this.canvas.height - this.player.radius, this.player.position.y));
+  }
+}
+
         updateEnemies(deltaTime, currentTime) {
           this.enemies.forEach(enemy => {
             if (!enemy.isAlive) return;
@@ -3678,78 +3799,6 @@
       console.log('🌟 コスモなぽりたん サバイバースターズ 🍝');
       console.log('WASDまたは方向キーで移動してね！');
     })();
-    setupJoystick() {
-  if (!this.isMobile) return; // スマホのみ
-  
-  const joystick = document.getElementById('virtual-joystick');
-  const base = joystick.querySelector('.joystick-base');
-  const stick = joystick.querySelector('.joystick-stick');
-  
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  const maxDistance = 35; // ジョイスティックの最大移動距離
-  
-  const handleStart = (e) => {
-    if (this.isPaused || this.isGameOver) return;
-    
-    isDragging = true;
-    base.classList.add('joystick-active');
-    
-    const touch = e.touches ? e.touches[0] : e;
-    const rect = base.getBoundingClientRect();
-    startX = rect.left + rect.width / 2;
-    startY = rect.top + rect.height / 2;
-  };
-  
-  const handleMove = (e) => {
-    if (!isDragging) return;
-    
-    e.preventDefault();
-    const touch = e.touches ? e.touches[0] : e;
-    
-    let dx = touch.clientX - startX;
-    let dy = touch.clientY - startY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    // 最大距離を超えないように制限
-    if (distance > maxDistance) {
-      dx = (dx / distance) * maxDistance;
-      dy = (dy / distance) * maxDistance;
-    }
-    
-    // スティックの位置を更新
-    stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    
-    // 正規化された入力値を計算（-1 ~ 1）
-    this.joystickInput.x = dx / maxDistance;
-    this.joystickInput.y = dy / maxDistance;
-  };
-  
-  const handleEnd = () => {
-    isDragging = false;
-    base.classList.remove('joystick-active');
-    
-    // スティックを中央に戻す
-    stick.style.transform = 'translate(-50%, -50%)';
-    
-    // 入力をリセット
-    this.joystickInput.x = 0;
-    this.joystickInput.y = 0;
-  };
-  
-  // タッチイベント
-  joystick.addEventListener('touchstart', handleStart);
-  joystick.addEventListener('touchmove', handleMove);
-  joystick.addEventListener('touchend', handleEnd);
-  joystick.addEventListener('touchcancel', handleEnd);
-  
-  // マウスイベント（デバッグ用）
-  joystick.addEventListener('mousedown', handleStart);
-  document.addEventListener('mousemove', handleMove);
-  document.addEventListener('mouseup', handleEnd);
-}
-
   </script>
 </body>
 </html>
